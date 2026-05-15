@@ -5,6 +5,8 @@
 
 set shell := ["bash", "-eu", "-o", "pipefail", "-c"]
 
+import 'docker.just'
+
 project_name      := "mockta"
 project_owner     := "donaldgifford"
 go_package        := "github.com/" + project_owner + "/" + project_name

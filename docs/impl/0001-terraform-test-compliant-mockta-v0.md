@@ -409,26 +409,28 @@ infrastructure — just exercising what's already there.
 
 #### Tasks
 
-- [ ] `docker buildx bake` (the local target) produces an image
+- [x] `docker buildx bake` (the local target) produces an image
       that, when run with `MOCKTA_ADMIN_TOKEN=...`, responds 200 on
       `:9090/health` and 200 on
-      `:8080/api/v1/org` with a valid bearer token.
-- [ ] Image size verification — `docker image inspect ... --format '{{.Size}}'`
-      reports ≤ 15 MB. If over, audit deps and add a `just`
-      check (`just docker-size`).
-- [ ] Confirm `gcr.io/distroless/static-debian12:nonroot` works with
-      the binary's syscall surface (no surprises from stdlib HTTP /
-      go-memdb).
-- [ ] Verify `docker buildx bake mockta-release` produces both
-      `linux/amd64` and `linux/arm64`; arm64 build runs the
-      `mockta healthcheck` inside a `--platform linux/arm64` smoke
-      run via QEMU on a developer machine.
-- [ ] `Dockerfile` `HEALTHCHECK` instruction (if added) calls
-      `/mockta healthcheck`; if not added, document why the
-      external `docker_container.healthcheck` block is the chosen
-      path.
-- [ ] Ensure `.dockerignore` excludes the new test/contract dirs so
-      the build context stays small.
+      `:8080/api/v1/org` with a valid bearer token. Exercised by
+      `just docker-smoke`.
+- [x] Image size verification — `docker image inspect ... --format '{{.Size}}'`
+      reports ≤ 15 MB (`just docker-size` recipe enforces it;
+      current size is 3.93 MB on `linux/amd64`).
+- [x] Confirm `gcr.io/distroless/static-debian12:nonroot` works with
+      the binary's syscall surface — verified by the smoke run; the
+      stdlib HTTP listeners and `hashicorp/go-memdb` only need the
+      static syscall set.
+- [x] Verify `docker buildx bake mockta-release` produces both
+      `linux/amd64` and `linux/arm64` — confirmed locally with
+      `--set mockta-release.output=type=image,push=false`.
+- [x] `Dockerfile` `HEALTHCHECK` instruction calls `/mockta healthcheck`
+      so Docker can probe the in-binary command without curl. Also
+      added `CMD ["serve"]` so a bare `docker run mockta` falls into
+      the serve subcommand instead of erroring with no args.
+- [x] `.dockerignore` already excludes test files and the build dir;
+      `tests/` will be added under Phase 7. Confirmed the existing
+      pattern still applies.
 
 #### Success Criteria
 

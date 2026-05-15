@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-`mockta` is a lightweight, embeddable Okta mock for Terraform acceptance tests and Go service tests. v0 implementation tracks IMPL-0001 — Phases 1–5 complete (CLI + config + server + store + middleware + resource handlers + populated gap registry with publication + drift check). DESIGN-0001 specs the mockta surface; DESIGN-0002 specs the libtftest adapter; RFC-0001 is the umbrella.
+`mockta` is a lightweight, embeddable Okta mock for Terraform acceptance tests and Go service tests. v0 implementation tracks IMPL-0001 — Phases 1–6 complete (CLI + config + server + store + middleware + resource handlers + populated gap registry + verified container pipeline (image ≤ 4MB, multi-arch, in-binary HEALTHCHECK)). DESIGN-0001 specs the mockta surface; DESIGN-0002 specs the libtftest adapter; RFC-0001 is the umbrella.
 
 The Go module is `github.com/donaldgifford/mockta`, Go 1.26.2 (mise-resolved). Layout:
 
@@ -33,6 +33,7 @@ The Go module is `github.com/donaldgifford/mockta`, Go 1.26.2 (mise-resolved). L
 - Full CI gate (lint + test + build + license-check): `just ci`
 - License compliance: `just license-check` (allowed: Apache-2.0, MIT, BSD-2/3-Clause, ISC, MPL-2.0)
 - Docker build via bake: `just docker-build` (recipes live in `docker.just`, imported into the main justfile)
+- Docker smoke + size gate: `just docker-smoke` runs the local image and curls `/health` + `/api/v1/org`; `just docker-size` asserts the image stays ≤ 15 MB (current: ~4 MB)
 - Tag and push a release: `just release v0.1.0` (`.goreleaser.yml` drives the release)
 
 Tool versions are pinned via `mise.toml` — run `mise install` to bootstrap the toolchain (Go, golangci-lint, just, goreleaser, docz, forge, etc.).
