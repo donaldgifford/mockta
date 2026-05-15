@@ -48,3 +48,6 @@ build/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Donald loop state (per-session, not source)
+.claude/donald-loop.local.md

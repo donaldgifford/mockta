@@ -1,22 +1,26 @@
----
 markdown_extensions:
-  - admonition
-  - tables
+    - admonition
+    - tables
 nav:
-  - Home: index.md
-  - ADRs:
-      - Overview: adr/README.md
-  - Design:
-      - Overview: design/README.md
-  - Implementation Plans:
-      - Overview: impl/README.md
-  - Investigations:
-      - Overview: investigation/README.md
-  - Plans:
-      - Overview: plan/README.md
-  - RFCs:
-      - Overview: rfc/README.md
+    - Home: index.md
+    - ADRs:
+        - Overview: adr/README.md
+    - Design:
+        - Overview: design/README.md
+        - 'DESIGN-0001: terraform-test compliant mockta v0': design/0001-terraform-test-compliant-mockta-v0.md
+        - 'DESIGN-0002: libtftest mockta parity adapter': design/0002-libtftest-mockta-parity-adapter.md
+    - Implementation Plans:
+        - Overview: impl/README.md
+        - 'IMPL-0001: terraform-test compliant mockta v0': impl/0001-terraform-test-compliant-mockta-v0.md
+    - Investigations:
+        - Overview: investigation/README.md
+    - Plans:
+        - Overview: plan/README.md
+    - RFCs:
+        - Overview: rfc/README.md
+        - 'RFC-0001: mockta: lightweight Okta mock for Terraform and Go service tests': rfc/0001-mockta-lightweight-okta-mock-for-terraform-and-go-service-tests.md
+    - mockta: mockta.md
 plugins:
-  - techdocs-core
+    - techdocs-core
 site_description: Documentation for mockta
 site_name: mockta

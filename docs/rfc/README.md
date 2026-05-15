@@ -29,4 +29,9 @@ docz create rfc "Your RFC Title"
 - **Superseded**: Replaced by another RFC
 
 <!-- BEGIN DOCZ AUTO-GENERATED -->
+## All RFCs
+
+| ID | Title | Status | Date | Author | Link |
+|----|-------|--------|------|--------|------|
+| RFC-0001 | mockta: lightweight Okta mock for Terraform and Go service tests | Draft | 2026-05-15 | Donald Gifford | [0001-mockta-lightweight-okta-mock-for-terraform-and-go-service-tests.md](0001-mockta-lightweight-okta-mock-for-terraform-and-go-service-tests.md) |
 <!-- END DOCZ AUTO-GENERATED -->
