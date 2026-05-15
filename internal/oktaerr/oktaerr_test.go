@@ -2,6 +2,7 @@ package oktaerr
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -54,6 +55,27 @@ func TestWrite_NoCauses(t *testing.T) {
 	// Real Okta serializes empty causes as [], not null.
 	if got.Causes == nil {
 		t.Errorf("Causes = nil, want empty slice")
+	}
+}
+
+func TestWrite_MarshalFailureFallsBackToPlainText(t *testing.T) {
+	// Inject a marshal stub that always fails so we can exercise the
+	// otherwise-unreachable error branch. Restore on teardown.
+	orig := marshal
+	marshal = func(any) ([]byte, error) { return nil, errors.New("induced") }
+	t.Cleanup(func() { marshal = orig })
+
+	rec := httptest.NewRecorder()
+	Write(rec, 400, CodeAPIValidationFailed, "boom")
+
+	if rec.Code != 500 {
+		t.Errorf("status = %d, want 500 (marshal failure)", rec.Code)
+	}
+	if got := rec.Header().Get("Content-Type"); got != "text/plain; charset=utf-8" {
+		t.Errorf("content-type = %q, want text/plain", got)
+	}
+	if !strings.Contains(rec.Body.String(), "marshal failure") {
+		t.Errorf("body = %q, want it to mention marshal failure", rec.Body.String())
 	}
 }
 

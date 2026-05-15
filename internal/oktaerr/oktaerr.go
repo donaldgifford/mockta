@@ -40,6 +40,12 @@ type Cause struct {
 	Summary string `json:"errorSummary"`
 }
 
+// marshal is overridable so the marshal-failure fallthrough can be
+// exercised by tests. Production code uses json.Marshal directly; the
+// indirection costs one function-pointer dereference per error
+// response — negligible on the error path.
+var marshal = json.Marshal
+
 // Write serializes resp at the given HTTP status with the
 // application/json content type. Causes is allowed to be nil — it
 // serializes as an empty array, matching real Okta.
@@ -54,7 +60,7 @@ func Write(w http.ResponseWriter, status int, code, summary string, causes ...Ca
 		ID:      newErrorID(),
 		Causes:  causes,
 	}
-	body, err := json.Marshal(resp)
+	body, err := marshal(resp)
 	if err != nil {
 		// Marshal failure is unreachable for a static struct, but
 		// fall through to a plain-text 500 if it ever happens.
