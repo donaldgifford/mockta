@@ -114,6 +114,23 @@ fmt:
     @gofmt -s -w .
     @goimports -w -local {{ goimports_local }} .
 
+# ─── Contract + smoke tests ─────────────────────────────────────────
+
+# Run the contract test suite (tests/contract is a separate module).
+# Drives mockta in-process via httptest and asserts the wire shape
+# matches what the okta/okta provider expects.
+[group('test')]
+test-contract:
+    @cd tests/contract && go test ./... -race
+
+# Run the terraform-test smoke fixture. Requires the mockta image to
+# be loaded into the local Docker daemon (run `just docker-build`
+# first). The fixture spins up the sidecar via the docker provider
+# and exercises okta/okta against it.
+[group('test')]
+test-smoke:
+    @cd tests/smoke && terraform init -upgrade && terraform test
+
 # ─── Gap registry ───────────────────────────────────────────────────
 
 # Regenerate docs/gaps.md from the static registry. Run after editing

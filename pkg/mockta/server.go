@@ -156,6 +156,21 @@ func (s *Server) shutdown(ctx context.Context) error {
 	return firstErr
 }
 
+// APIHandler returns the assembled API handler (router + middleware
+// stack) without starting any listeners. The contract test suite
+// uses this to mount mockta on an httptest.Server; production code
+// uses Start, which calls this internally. The returned handler is
+// safe to wrap or re-route; the Server retains no reference to it
+// after construction.
+func (s *Server) APIHandler() http.Handler { return s.apiHandler() }
+
+// AdminHandler is the admin-port equivalent of APIHandler. The
+// contract suite doesn't use the admin port (no auth on /health,
+// /admin/reset is a destructive op the suite doesn't need), but it
+// is exported so embedders can stand up both surfaces under their
+// own listener.
+func (s *Server) AdminHandler() http.Handler { return s.adminHandler() }
+
 // apiHandler builds the :8080 router and wraps it in auth + audit
 // middleware. The catch-all 501 handler is registered last so any
 // path not claimed by a real handler lands there.

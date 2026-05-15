@@ -59,6 +59,49 @@ jobs:
           slug: donaldgifford/
         continue-on-error: true
 
+  contract:
+    name: Contract tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Run contract suite
+        run: cd tests/contract && go test ./... -race
+
+  smoke:
+    name: Smoke (terraform test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.7.0
+
+      - name: Build mockta image into local daemon
+        uses: docker/bake-action@v6
+        with:
+          source: .
+          files: docker-bake.hcl
+          load: true
+
+      - name: Run terraform test
+        run: cd tests/smoke && terraform init -upgrade && terraform test
+
   gaps-drift:
     name: Gap registry drift check
     runs-on: ubuntu-latest
