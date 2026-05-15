@@ -31,16 +31,16 @@ build: build-core
 # Build the core CLI binary into build/bin/mockta
 [group('build')]
 build-core:
-    @mkdir -p {{ "{{" }} bin_dir {{ "}}" }}
-    @go build -ldflags "-X main.version={{ "{{" }} version {{ "}}" }} -X main.commit={{ "{{" }} commit_hash {{ "}}" }}" \
-        -o {{ "{{" }} bin_dir {{ "}}" }}/{{ "{{" }} project_name {{ "}}" }} ./cmd/{{ "{{" }} project_name {{ "}}" }}
+    @mkdir -p {{ bin_dir }}
+    @go build -ldflags "-X main.version={{ version }} -X main.commit={{ commit_hash }}" \
+        -o {{ bin_dir }}/{{ project_name }} ./cmd/{{ project_name }}
     @echo "✓ Core binaries built"
 
 # Remove build artifacts and the Go build cache
 [group('build')]
 clean:
-    @rm -rf {{ "{{" }} bin_dir {{ "}}" }}/
-    @rm -f {{ "{{" }} coverage_out {{ "}}" }}
+    @rm -rf {{ bin_dir }}/
+    @rm -f {{ coverage_out }}
     @go clean -cache
     @find . -name "*.test" -delete
     @echo "✓ Cleaned build artifacts"
@@ -50,12 +50,12 @@ clean:
 # Build then run the CLI
 [group('run')]
 run: build
-    @{{ "{{" }} bin_dir {{ "}}" }}/{{ "{{" }} project_name {{ "}}" }}
+    @{{ bin_dir }}/{{ project_name }}
 
 # Build then run the CLI from the local bin
 [group('run')]
 run-local: build
-    @{{ "{{" }} bin_dir {{ "}}" }}/{{ "{{" }} project_name {{ "}}" }}
+    @{{ bin_dir }}/{{ project_name }}
 
 # ─── Test ───────────────────────────────────────────────────────────
 
@@ -71,18 +71,18 @@ test-all: test
 # Run tests for a single package: just test-pkg ./pkg/foo
 [group('test')]
 test-pkg pkg:
-    @go test -v -race {{ "{{" }} pkg {{ "}}" }}
+    @go test -v -race {{ pkg }}
 
 # Run tests with a coverage profile written to coverage.out
 [group('test')]
 test-coverage:
-    @go test -v -race -coverprofile={{ "{{" }} coverage_out {{ "}}" }} ./...
+    @go test -v -race -coverprofile={{ coverage_out }} ./...
 
 # Run tests and open the HTML coverage report
 [group('test')]
 test-report:
-    @go test -coverprofile={{ "{{" }} coverage_out {{ "}}" }} ./...
-    @go tool cover -html={{ "{{" }} coverage_out {{ "}}" }}
+    @go test -coverprofile={{ coverage_out }} ./...
+    @go tool cover -html={{ coverage_out }}
 
 # ─── Lint & format ─────────────────────────────────────────────────
 
@@ -110,14 +110,14 @@ lint-actions:
 [group('lint')]
 fmt:
     @gofmt -s -w .
-    @goimports -w -local {{ "{{" }} goimports_local {{ "}}" }} .
+    @goimports -w -local {{ goimports_local }} .
 
 # ─── License compliance ─────────────────────────────────────────────
 
 # Check dependency licenses against the allow list
 [group('license')]
 license-check:
-    @go-licenses check ./... --allowed_licenses={{ "{{" }} allowed_licenses {{ "}}" }}
+    @go-licenses check ./... --allowed_licenses={{ allowed_licenses }}
 
 # Generate CSV report of all dependency licenses
 [group('license')]
@@ -139,8 +139,8 @@ release-local:
 # Tag and push a new release: just release v0.1.0
 [group('release')]
 release tag:
-    @git tag -a {{ "{{" }} tag {{ "}}" }} -m "Release {{ "{{" }} tag {{ "}}" }}"
-    @git push origin {{ "{{" }} tag {{ "}}" }}
+    @git tag -a {{ tag }} -m "Release {{ tag }}"
+    @git push origin {{ tag }}
 
 # ─── Composite gates ────────────────────────────────────────────────
 
