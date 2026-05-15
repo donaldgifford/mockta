@@ -86,6 +86,9 @@ linters:
         - (*github.com/fatih/color.Color).Printf  # CLI color output to stdout.
         - (*github.com/fatih/color.Color).Println  # CLI color output to stdout.
         - (*github.com/spf13/cobra.Command).MarkFlagRequired  # Only fails if flag name is wrong.
+        - fmt.Fprintf  # CLI output where write errors are not actionable.
+        - fmt.Fprintln  # CLI output where write errors are not actionable.
+        - fmt.Fprint  # CLI output where write errors are not actionable.
 
     errorlint:
       errorf: true
