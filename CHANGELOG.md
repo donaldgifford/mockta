@@ -17,6 +17,7 @@ this project adheres to [Semantic Versioning](https://semver.org/).
 - *(gaps)* Add gap-list determinism golden test
 - *(smoke)* TLS-terminate via caddy so okta provider can dial :443
 - *(middleware)* Accept SSWS auth scheme alongside Bearer
+- *(handlers)* Synthetic GET /api/v1/users/me for provider configure
 
 ### Bug Fixes
 
