@@ -35,4 +35,5 @@ this project adheres to [Semantic Versioning](https://semver.org/).
 - Bump smoke terraform to 1.10 so test-file modules resolve
 - Regenerate CHANGELOG.md from cliff
 - Add Apache-2.0 LICENSE
+- Init each smoke submodule explicitly and bump terraform to 1.14
 
