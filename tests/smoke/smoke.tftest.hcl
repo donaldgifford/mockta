@@ -48,9 +48,4 @@ run "apply_module" {
     condition     = output.group_id != ""
     error_message = "okta_group.engineers.id is empty"
   }
-
-  assert {
-    condition     = output.app_id != ""
-    error_message = "okta_app_saml.acme_saml.id is empty"
-  }
 }

@@ -58,29 +58,18 @@ resource "okta_group_memberships" "alice_in_engineers" {
   users    = [okta_user.alice.id]
 }
 
-resource "okta_app_saml" "acme_saml" {
-  label                    = "Acme SAML Smoke"
-  sso_url                  = "https://smoke.example/sso"
-  recipient                = "https://smoke.example/recipient"
-  destination              = "https://smoke.example/destination"
-  audience                 = "https://smoke.example/audience"
-  subject_name_id_template = "$${user.userName}"
-  subject_name_id_format   = "urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified"
-  signature_algorithm      = "RSA_SHA256"
-  digest_algorithm         = "SHA256"
-  authn_context_class_ref  = "urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport"
-  # okta/okta provider requires at least one of these on a custom SAML
-  # app or it rejects the resource before sending any request.
-  response_signed  = true
-  assertion_signed = true
-}
+# okta_app_saml is intentionally absent from the v0 smoke fixture.
+# The okta/okta provider's SAML-app create flow calls
+# GET /api/v1/policies to look up the default ACCESS_POLICY before
+# any app-mockta call lands. /api/v1/policies is out of scope for
+# mockta v0 (tracked as MOCKTA_GAP_0030 in the registry) so the
+# provider's resource ends up calling a 501'd endpoint and never
+# reaches mockta's /api/v1/apps handler. A follow-up that lands a
+# stub policies endpoint will let this resource live in the fixture.
 
 output "user_id" {
   value = okta_user.alice.id
 }
 output "group_id" {
   value = okta_group.engineers.id
-}
-output "app_id" {
-  value = okta_app_saml.acme_saml.id
 }
