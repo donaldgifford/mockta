@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/donaldgifford/mockta/internal/gaps"
 	"github.com/donaldgifford/mockta/internal/middleware"
 	"github.com/donaldgifford/mockta/internal/oktaerr"
 	"github.com/donaldgifford/mockta/internal/store"
@@ -15,11 +16,9 @@ import (
 // v0 only implements SAML 2.0; the other sign-on modes route through
 // the gap registry.
 const (
-	appSignOnSAML       = "SAML_2_0"
-	appStatusActive     = "ACTIVE"
-	appStatusInactive   = "INACTIVE"
-	gapAppSignOnNonSAML = "MOCKTA_GAP_APP_SIGNON_NON_SAML"
-	gapAppListFilterBad = "MOCKTA_GAP_APP_FILTER"
+	appSignOnSAML     = "SAML_2_0"
+	appStatusActive   = "ACTIVE"
+	appStatusInactive = "INACTIVE"
 )
 
 // appRequest is the minimal inbound shape. Settings is held as
@@ -51,9 +50,9 @@ func NewAppsCreate(s *store.Store) http.Handler {
 			return
 		}
 		if req.SignOnMode != appSignOnSAML {
-			w.Header().Set(middleware.GapHeader, gapAppSignOnNonSAML)
+			w.Header().Set(middleware.GapHeader, gaps.IDAppSignOnNonSAML)
 			oktaerr.Write(w, http.StatusNotImplemented,
-				gapAppSignOnNonSAML,
+				gaps.IDAppSignOnNonSAML,
 				"signOnMode "+req.SignOnMode+" is not implemented; v0 only supports SAML_2_0")
 			return
 		}
@@ -195,7 +194,7 @@ func NewAppsList(s *store.Store) http.Handler {
 		if filter != "" {
 			p, err := parseAppFilter(filter)
 			if err != nil {
-				w.Header().Set(middleware.GapHeader, gapAppListFilterBad)
+				w.Header().Set(middleware.GapHeader, gaps.IDAppFilter)
 				oktaerr.Write(w, http.StatusBadRequest,
 					oktaerr.CodeAPIValidationFailed,
 					"Api validation failed: filter — "+err.Error())

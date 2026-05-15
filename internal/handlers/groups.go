@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/donaldgifford/mockta/internal/gaps"
 	"github.com/donaldgifford/mockta/internal/middleware"
 	"github.com/donaldgifford/mockta/internal/oktaerr"
 	"github.com/donaldgifford/mockta/internal/store"
@@ -17,9 +18,6 @@ const (
 	groupTypeOkta    = "OKTA_GROUP"
 	groupTypeApp     = "APP_GROUP"
 	groupTypeBuiltin = "BUILT_IN"
-
-	gapGroupTypeAppGroup = "MOCKTA_GAP_GROUP_TYPE_APP"
-	gapGroupTypeBuiltIn  = "MOCKTA_GAP_GROUP_TYPE_BUILTIN"
 )
 
 type groupRequest struct {
@@ -75,15 +73,15 @@ func validateGroupType(w http.ResponseWriter, t string) (string, bool) {
 	case "", groupTypeOkta:
 		return groupTypeOkta, true
 	case groupTypeApp:
-		w.Header().Set(middleware.GapHeader, gapGroupTypeAppGroup)
+		w.Header().Set(middleware.GapHeader, gaps.IDGroupTypeAppGroup)
 		oktaerr.Write(w, http.StatusNotImplemented,
-			gapGroupTypeAppGroup,
+			gaps.IDGroupTypeAppGroup,
 			"APP_GROUP is not implemented by mockta")
 		return "", false
 	case groupTypeBuiltin:
-		w.Header().Set(middleware.GapHeader, gapGroupTypeBuiltIn)
+		w.Header().Set(middleware.GapHeader, gaps.IDGroupTypeBuiltIn)
 		oktaerr.Write(w, http.StatusNotImplemented,
-			gapGroupTypeBuiltIn,
+			gaps.IDGroupTypeBuiltIn,
 			"BUILT_IN groups are not implemented by mockta")
 		return "", false
 	default:
@@ -200,7 +198,7 @@ func NewGroupsDelete(s *store.Store) http.Handler {
 func NewGroupsList(s *store.Store) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if f := r.URL.Query().Get("filter"); f != "" {
-			w.Header().Set(middleware.GapHeader, "MOCKTA_GAP_GROUP_FILTER")
+			w.Header().Set(middleware.GapHeader, gaps.IDGroupFilter)
 			oktaerr.Write(w, http.StatusBadRequest,
 				oktaerr.CodeAPIValidationFailed,
 				"Api validation failed: filter on groups is not implemented")

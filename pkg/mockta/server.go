@@ -63,7 +63,7 @@ func New(cfg config.Config, logger *slog.Logger) *Server {
 		cfg:    cfg,
 		logger: logger,
 		store:  st,
-		gaps:   gaps.StubRegistry{},
+		gaps:   gaps.Static(),
 	}
 }
 

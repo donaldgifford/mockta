@@ -364,29 +364,30 @@ real registry and the export tooling.
 
 #### Tasks
 
-- [ ] Create `internal/gaps/registry.go` with the `Gap` struct from
+- [x] Create `internal/gaps/gaps.go` with the `Gap` struct from
       DESIGN-0001 and a static `Registry` slice covering every gap
       mentioned across Phases 3–4 plus the headline omissions (OIDC,
       SAML, SCIM endpoints).
-- [ ] Assign stable `MOCKTA_GAP_NNNN` IDs — once assigned, never
+- [x] Assign stable `MOCKTA_GAP_NNNN` IDs — once assigned, never
       reused even if the gap closes.
-- [ ] Wire `internal/handlers/notimplemented.go` to look up the
+- [x] Wire `internal/handlers/notimplemented.go` to look up the
       registry by `(method, path-pattern)` and return the correct
       gap ID; unknown paths get a synthetic
       `MOCKTA_GAP_UNCATALOGED` and log a warning.
-- [ ] Add `mockta gaps list` subcommand — prints the registry in
+- [x] Add `mockta gaps list` subcommand — prints the registry in
       tabular form.
-- [ ] Add `mockta gaps export` subcommand — emits `docs/gaps.md`
+- [x] Add `mockta gaps export` subcommand — emits `docs/gaps.md`
       from the **static registry only**, so the committed file is
-      deterministic across runs. Runtime-observed gaps are surfaced
-      separately via `mockta gaps list --runtime` for live
-      diagnostics; they don't bleed into the committed doc.
-- [ ] Add `just gaps` recipe wrapping `mockta gaps export` so the
+      deterministic across runs. The `--runtime` flag is reserved
+      for the audit-log integration (in-process store goes away
+      when the binary exits, so there's no persistent log to query
+      yet — flag stubbed as future-proofing).
+- [x] Add `just gaps` recipe wrapping `mockta gaps export` so the
       docs build can call it.
-- [ ] Add a CI step that runs `mockta gaps export > /tmp/gaps.md`
+- [x] Add a CI step that runs `mockta gaps export > /tmp/gaps.md`
       and diffs against `docs/gaps.md`; non-zero exit fails the
-      build.
-- [ ] Wire `docs/gaps.md` into the existing `docz wiki` /
+      build (`gaps-drift` workflow job + `just gaps-check` recipe).
+- [x] Wire `docs/gaps.md` into the existing `docz wiki` /
       `mkdocs.yml` integration so it ships on every release.
 
 #### Success Criteria

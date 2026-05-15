@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/donaldgifford/mockta/internal/gaps"
 	"github.com/donaldgifford/mockta/internal/middleware"
 	"github.com/donaldgifford/mockta/internal/oktaerr"
 	"github.com/donaldgifford/mockta/internal/store"
@@ -216,7 +217,7 @@ func NewUsersList(s *store.Store) http.Handler {
 		if filter != "" {
 			p, err := parseUserFilter(filter)
 			if err != nil {
-				w.Header().Set(middleware.GapHeader, "MOCKTA_GAP_FILTER")
+				w.Header().Set(middleware.GapHeader, gaps.IDUserFilter)
 				oktaerr.Write(w, http.StatusBadRequest,
 					oktaerr.CodeAPIValidationFailed,
 					"Api validation failed: filter — "+err.Error())

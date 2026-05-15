@@ -112,6 +112,24 @@ fmt:
     @gofmt -s -w .
     @goimports -w -local {{ goimports_local }} .
 
+# ─── Gap registry ───────────────────────────────────────────────────
+
+# Regenerate docs/gaps.md from the static registry. Run after editing
+# internal/gaps/gaps.go so the committed doc stays in sync.
+[group('lint')]
+gaps: build
+    @{{ bin_dir }}/{{ project_name }} gaps export --out docs/gaps.md
+    @echo "✓ docs/gaps.md regenerated"
+
+# Drift check: fails if `mockta gaps export` would change the committed
+# docs/gaps.md. Wired into CI to catch stale gap docs at PR time.
+[group('lint')]
+gaps-check: build
+    @{{ bin_dir }}/{{ project_name }} gaps export > /tmp/mockta-gaps-check.md
+    @diff -u docs/gaps.md /tmp/mockta-gaps-check.md \
+        || (echo "✗ docs/gaps.md is out of date — run 'just gaps' to refresh"; exit 1)
+    @echo "✓ docs/gaps.md is up to date"
+
 # ─── License compliance ─────────────────────────────────────────────
 
 # Check dependency licenses against the allow list
@@ -149,7 +167,7 @@ release tag:
 check: lint test
     @echo "✓ Pre-commit checks passed"
 
-# Full CI gate: lint + test + build + license-check
+# Full CI gate: lint + test + build + license-check + gap drift check
 [group('gate')]
-ci: lint test build license-check
+ci: lint test build license-check gaps-check
     @echo "✓ CI pipeline complete"

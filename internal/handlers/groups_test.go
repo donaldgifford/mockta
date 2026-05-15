@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/donaldgifford/mockta/internal/gaps"
 	"github.com/donaldgifford/mockta/internal/middleware"
 	"github.com/donaldgifford/mockta/internal/store"
 )
@@ -67,8 +68,8 @@ func TestGroupsCreate_AppGroupReturnsGap(t *testing.T) {
 	if rec.Code != http.StatusNotImplemented {
 		t.Errorf("status = %d, want 501", rec.Code)
 	}
-	if got := rec.Header().Get(middleware.GapHeader); got != gapGroupTypeAppGroup {
-		t.Errorf("gap header = %q, want %q", got, gapGroupTypeAppGroup)
+	if got := rec.Header().Get(middleware.GapHeader); got != gaps.IDGroupTypeAppGroup {
+		t.Errorf("gap header = %q, want %q", got, gaps.IDGroupTypeAppGroup)
 	}
 }
 

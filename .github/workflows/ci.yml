@@ -59,6 +59,26 @@ jobs:
           slug: donaldgifford/
         continue-on-error: true
 
+  gaps-drift:
+    name: Gap registry drift check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Build mockta
+        run: go build -o /tmp/mockta ./cmd/mockta
+
+      - name: Regenerate gaps.md and diff
+        run: |
+          /tmp/mockta gaps export > /tmp/gaps.md
+          diff -u docs/gaps.md /tmp/gaps.md \
+            || (echo "docs/gaps.md out of date — run 'just gaps' locally"; exit 1)
+
   security:
     name: Security Scan
     runs-on: ubuntu-latest

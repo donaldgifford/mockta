@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/donaldgifford/mockta/internal/gaps"
 	"github.com/donaldgifford/mockta/internal/middleware"
 	"github.com/donaldgifford/mockta/internal/store"
 )
@@ -51,7 +52,7 @@ func TestAppsCreate_NonSAMLReturnsGap(t *testing.T) {
 	if rec.Code != http.StatusNotImplemented {
 		t.Errorf("status = %d, want 501", rec.Code)
 	}
-	if rec.Header().Get(middleware.GapHeader) != gapAppSignOnNonSAML {
+	if rec.Header().Get(middleware.GapHeader) != gaps.IDAppSignOnNonSAML {
 		t.Errorf("gap header = %q", rec.Header().Get(middleware.GapHeader))
 	}
 }
@@ -222,8 +223,8 @@ func TestAppsList_BadFilterReturnsGap(t *testing.T) {
 	if rec.Code != http.StatusBadRequest {
 		t.Errorf("status = %d, want 400", rec.Code)
 	}
-	if rec.Header().Get(middleware.GapHeader) != gapAppListFilterBad {
+	if rec.Header().Get(middleware.GapHeader) != gaps.IDAppFilter {
 		t.Errorf("gap header = %q, want %q",
-			rec.Header().Get(middleware.GapHeader), gapAppListFilterBad)
+			rec.Header().Get(middleware.GapHeader), gaps.IDAppFilter)
 	}
 }

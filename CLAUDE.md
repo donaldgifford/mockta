@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-`mockta` is a lightweight, embeddable Okta mock for Terraform acceptance tests and Go service tests. v0 implementation tracks IMPL-0001 — Phases 1–4 complete (CLI + config + server + store + middleware + resource handlers wired). DESIGN-0001 specs the mockta surface; DESIGN-0002 specs the libtftest adapter; RFC-0001 is the umbrella.
+`mockta` is a lightweight, embeddable Okta mock for Terraform acceptance tests and Go service tests. v0 implementation tracks IMPL-0001 — Phases 1–5 complete (CLI + config + server + store + middleware + resource handlers + populated gap registry with publication + drift check). DESIGN-0001 specs the mockta surface; DESIGN-0002 specs the libtftest adapter; RFC-0001 is the umbrella.
 
 The Go module is `github.com/donaldgifford/mockta`, Go 1.26.2 (mise-resolved). Layout:
 
@@ -16,7 +16,7 @@ The Go module is `github.com/donaldgifford/mockta`, Go 1.26.2 (mise-resolved). L
 - `internal/oktaerr/` — Okta-shaped error envelope writer. `errorId` is always `mockta-<hex>` so failures are obvious in provider logs.
 - `internal/middleware/` — `Auth` (constant-time bearer match, strict + permissive modes), `Audit` (writes every request into the store; gap IDs flow via the `X-Mockta-Gap` response header which the middleware strips), `Chain` composer, `EmitNextLink` helper. Empty `MOCKTA_ADMIN_TOKEN` disables auth entirely — useful for scripts.
 - `internal/handlers/` — HTTP handlers. `dto.go` holds shared decode + error-mapping helpers (`decodeJSONBodyLenient`, `writeStoreError`). `org.go` / `health.go` / `admin.go` / `notimplemented.go` are the non-resource endpoints; `users.go`, `groups.go`, `apps.go` implement the v0 resource CRUD + lifecycle + list flows. Filters use a SCIM-ish `attr op "value"` grammar — `eq` + `sw` for users/apps, `q=` prefix-on-name for groups. Out-of-scope variants (APP_GROUP, BUILT_IN, non-SAML signOnMode, group filter, unsupported user attributes/operators) return 501/400 with a `MOCKTA_GAP_*` ID surfaced via the `X-Mockta-Gap` header.
-- `internal/gaps/` — `Registry` interface + `StubRegistry`. Phase 5 replaces the stub with a populated registry and adds `mockta gaps` CLI subcommands.
+- `internal/gaps/` — `Registry` interface, populated `Static()` registry, and markdown export. Stable `MOCKTA_GAP_NNNN` IDs allocated monotonically; handler-internal IDs (0001–0006) cover validation paths inside routed endpoints, 0010+ are whole-resource gaps matched by path prefix. `mockta gaps list` prints the table; `mockta gaps export --out docs/gaps.md` regenerates the deterministic markdown that ships on the MkDocs wiki. The `gaps-check` justfile recipe (and the matching CI job) fail when `docs/gaps.md` drifts from the registry.
 - `pkg/mockta/` — `Server` opens `:8080` (API) and `:9090` (admin/health); graceful shutdown via `context.WithoutCancel` so canceled parents don't skip the drain window.
 
 ## Common commands
