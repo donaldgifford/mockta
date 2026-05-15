@@ -22,9 +22,11 @@ func TestAuth_StrictMatching(t *testing.T) {
 	}{
 		{"no header", "", http.StatusUnauthorized},
 		{"empty bearer", "Bearer ", http.StatusUnauthorized},
+		{"empty ssws", "SSWS ", http.StatusUnauthorized},
 		{"wrong scheme", "Basic xyz", http.StatusUnauthorized},
 		{"wrong token", "Bearer wrong", http.StatusUnauthorized},
-		{"correct token", "Bearer secret", http.StatusOK},
+		{"correct token bearer", "Bearer secret", http.StatusOK},
+		{"correct token ssws", "SSWS secret", http.StatusOK},
 	}
 
 	mw := Auth("secret", true)
