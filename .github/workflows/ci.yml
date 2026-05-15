@@ -48,8 +48,11 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Install just
+        uses: extractions/setup-just@v3
+
       - name: Run unit tests
-        run: make test-coverage
+        run: just test-coverage
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
