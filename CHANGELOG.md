@@ -16,6 +16,7 @@ this project adheres to [Semantic Versioning](https://semver.org/).
 - *(tests)* Add contract suite and terraform-test smoke fixture
 - *(gaps)* Add gap-list determinism golden test
 - *(smoke)* TLS-terminate via caddy so okta provider can dial :443
+- *(middleware)* Accept SSWS auth scheme alongside Bearer
 
 ### Bug Fixes
 
