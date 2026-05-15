@@ -276,62 +276,64 @@ live alongside groups.
 
 **Users (`internal/handlers/users.go`)**
 
-- [ ] `POST /api/v1/users[?activate=true|false]` — create. Validates
+- [x] `POST /api/v1/users[?activate=true|false]` — create. Validates
       uniqueness on `login` and `email`. Strict mode enforces
       required-field checks + RFC 5322-ish format check for `login`
       + unique constraints; unrecognized fields are accepted and
       ignored (the provider sometimes sends computed fields that
       aren't documented). Permissive mode accepts any well-formed
       JSON.
-- [ ] `GET /api/v1/users/{id_or_login}` — get by ID or login.
-- [ ] `PUT /api/v1/users/{id}` — update (full replace per Okta
+- [x] `GET /api/v1/users/{id_or_login}` — get by ID or login.
+- [x] `PUT /api/v1/users/{id}` — update (full replace per Okta
       semantics, not patch).
-- [ ] `POST /api/v1/users/{id}/lifecycle/activate` and
+- [x] `POST /api/v1/users/{id}/lifecycle/activate` and
       `.../deactivate` — synchronous status flip.
-- [ ] `DELETE /api/v1/users/{id}` — 202 then synchronous delete.
-- [ ] `GET /api/v1/users?filter=...&limit=...` — list with filter
+- [x] `DELETE /api/v1/users/{id}` — synchronous delete (v0 collapses
+      Okta's two-step destroy into one for `okta_user`-resource
+      compatibility).
+- [x] `GET /api/v1/users?filter=...&limit=...` — list with filter
       evaluation. v0 supports SCIM-filter `eq` and `sw` operators
       against `id`, `login`, `email`, and `status`. Any other
       operator or attribute returns a 400 with a gap-list pointer.
 
 **Groups (`internal/handlers/groups.go`)**
 
-- [ ] `POST /api/v1/groups` — create. Validates `type=OKTA_GROUP`;
+- [x] `POST /api/v1/groups` — create. Validates `type=OKTA_GROUP`;
       other types return 501 with a gap-list ID.
-- [ ] `GET /api/v1/groups/{id}` — get.
-- [ ] `PUT /api/v1/groups/{id}` — update.
-- [ ] `DELETE /api/v1/groups/{id}` — delete (cascades membership
+- [x] `GET /api/v1/groups/{id}` — get.
+- [x] `PUT /api/v1/groups/{id}` — update.
+- [x] `DELETE /api/v1/groups/{id}` — delete (cascades membership
       rows).
-- [ ] `GET /api/v1/groups?q=...` — list with `q=` prefix search on
+- [x] `GET /api/v1/groups?q=...` — list with `q=` prefix search on
       `name`.
 
-**Group memberships (`internal/handlers/memberships.go`)**
+**Group memberships (collocated in `internal/handlers/groups.go`)**
 
-- [ ] `PUT /api/v1/groups/{gid}/users/{uid}` — add (idempotent).
-- [ ] `DELETE /api/v1/groups/{gid}/users/{uid}` — remove.
-- [ ] `GET /api/v1/groups/{gid}/users` — list (paginated, Link
+- [x] `PUT /api/v1/groups/{gid}/users/{uid}` — add (idempotent).
+- [x] `DELETE /api/v1/groups/{gid}/users/{uid}` — remove.
+- [x] `GET /api/v1/groups/{gid}/users` — list (paginated, Link
       header).
 
 **Apps (`internal/handlers/apps.go`)**
 
-- [ ] `POST /api/v1/apps` — create. Only `signOnMode=SAML_2_0` is
+- [x] `POST /api/v1/apps` — create. Only `signOnMode=SAML_2_0` is
       accepted in v0; other modes return 501.
-- [ ] `GET /api/v1/apps/{id}` — get.
-- [ ] `PUT /api/v1/apps/{id}` — update.
-- [ ] `POST /api/v1/apps/{id}/lifecycle/activate` and
+- [x] `GET /api/v1/apps/{id}` — get.
+- [x] `PUT /api/v1/apps/{id}` — update.
+- [x] `POST /api/v1/apps/{id}/lifecycle/activate` and
       `.../deactivate`.
-- [ ] `DELETE /api/v1/apps/{id}` — delete.
-- [ ] `GET /api/v1/apps?filter=...` — list with filter.
+- [x] `DELETE /api/v1/apps/{id}` — delete (requires INACTIVE first).
+- [x] `GET /api/v1/apps?filter=...` — list with filter.
 
 **Cross-cutting**
 
-- [ ] Listing endpoints emit `Link: <...>; rel="next"` header on the
+- [x] Listing endpoints emit `Link: <...>; rel="next"` header on the
       first page with an empty cursor, then return empty on the
       second page. Verifies provider pagination handling.
-- [ ] Add `MOCKTA_GAP_*` registry entries for all the
+- [x] Add `MOCKTA_GAP_*` registry entries for all the
       out-of-scope-but-mentioned cases (group types, sign-on modes,
       etc.).
-- [ ] Per-handler `httptest` unit tests: happy path, not-found,
+- [x] Per-handler `httptest` unit tests: happy path, not-found,
       validation error, uniqueness, gap-list 501 path.
 
 #### Success Criteria

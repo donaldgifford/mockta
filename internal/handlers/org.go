@@ -40,21 +40,22 @@ func NewOrg(orgName string) http.Handler {
 			Created:    created,
 			LastUpdate: created,
 		}
-		writeJSON(w, http.StatusOK, resp)
+		writeJSON(w, resp)
 	})
 }
 
-// writeJSON is a tiny helper to serialize and emit a JSON response.
-// On marshal failure we fall through to a 500 with no body — these
-// are static struct types, marshal failures are unreachable in
-// practice.
-func writeJSON(w http.ResponseWriter, status int, v any) {
+// writeJSON is a tiny helper to serialize and emit a 200 JSON
+// response. On marshal failure we fall through to a 500 with no body
+// — handler responses are static struct types, so marshal failures
+// are unreachable in practice. Resource handlers that need a non-200
+// status set it manually before calling writeJSON.
+func writeJSON(w http.ResponseWriter, v any) {
 	body, err := json.Marshal(v)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
+	w.WriteHeader(http.StatusOK)
 	w.Write(body)
 }

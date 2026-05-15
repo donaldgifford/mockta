@@ -163,6 +163,43 @@ func (s *Server) apiHandler() http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle("GET /api/v1/org", handlers.NewOrg(s.cfg.OrgName))
 
+	// Users
+	mux.Handle("POST /api/v1/users",
+		handlers.NewUsersCreate(s.store, s.cfg.StrictMode))
+	mux.Handle("GET /api/v1/users", handlers.NewUsersList(s.store))
+	mux.Handle("GET /api/v1/users/{idOrLogin}", handlers.NewUsersGet(s.store))
+	mux.Handle("PUT /api/v1/users/{id}",
+		handlers.NewUsersUpdate(s.store, s.cfg.StrictMode))
+	mux.Handle("DELETE /api/v1/users/{id}", handlers.NewUsersDelete(s.store))
+	mux.Handle("POST /api/v1/users/{id}/lifecycle/activate",
+		handlers.NewUsersActivate(s.store))
+	mux.Handle("POST /api/v1/users/{id}/lifecycle/deactivate",
+		handlers.NewUsersDeactivate(s.store))
+
+	// Groups + memberships
+	mux.Handle("POST /api/v1/groups", handlers.NewGroupsCreate(s.store))
+	mux.Handle("GET /api/v1/groups", handlers.NewGroupsList(s.store))
+	mux.Handle("GET /api/v1/groups/{id}", handlers.NewGroupsGet(s.store))
+	mux.Handle("PUT /api/v1/groups/{id}", handlers.NewGroupsUpdate(s.store))
+	mux.Handle("DELETE /api/v1/groups/{id}", handlers.NewGroupsDelete(s.store))
+	mux.Handle("PUT /api/v1/groups/{gid}/users/{uid}",
+		handlers.NewGroupMembershipAdd(s.store))
+	mux.Handle("DELETE /api/v1/groups/{gid}/users/{uid}",
+		handlers.NewGroupMembershipRemove(s.store))
+	mux.Handle("GET /api/v1/groups/{gid}/users",
+		handlers.NewGroupMembershipList(s.store))
+
+	// Apps
+	mux.Handle("POST /api/v1/apps", handlers.NewAppsCreate(s.store))
+	mux.Handle("GET /api/v1/apps", handlers.NewAppsList(s.store))
+	mux.Handle("GET /api/v1/apps/{id}", handlers.NewAppsGet(s.store))
+	mux.Handle("PUT /api/v1/apps/{id}", handlers.NewAppsUpdate(s.store))
+	mux.Handle("DELETE /api/v1/apps/{id}", handlers.NewAppsDelete(s.store))
+	mux.Handle("POST /api/v1/apps/{id}/lifecycle/activate",
+		handlers.NewAppsActivate(s.store))
+	mux.Handle("POST /api/v1/apps/{id}/lifecycle/deactivate",
+		handlers.NewAppsDeactivate(s.store))
+
 	// Catch-all 501. ServeMux's "/" pattern matches any path not
 	// already claimed.
 	mux.Handle("/", handlers.NewNotImplemented(s.gaps))

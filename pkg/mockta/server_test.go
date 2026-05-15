@@ -1,6 +1,7 @@
 package mockta
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"io"
@@ -175,4 +176,120 @@ func contains(s, sub string) bool {
 		}
 	}
 	return false
+}
+
+// TestServer_ResourceRoundTrip walks the curl sequence from IMPL-0001
+// §Phase 4 success criteria. It exists to catch routing or wiring
+// regressions even when handler-level tests pass.
+func TestServer_ResourceRoundTrip(t *testing.T) {
+	cfg := config.Config{AdminToken: "tok", OrgName: "acme", StrictMode: true}
+	cleanup := startTestServer(t, cfg)
+	defer cleanup()
+
+	do := func(method, path string, body any) (int, []byte) {
+		t.Helper()
+		var rdr io.Reader = http.NoBody
+		if body != nil {
+			b, err := json.Marshal(body)
+			if err != nil {
+				t.Fatal(err)
+			}
+			rdr = bytes.NewReader(b)
+		}
+		req, err := http.NewRequestWithContext(t.Context(), method,
+			"http://localhost:8080"+path, rdr)
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header.Set("Authorization", "Bearer tok")
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() { _ = resp.Body.Close() }()
+		respBody, _ := io.ReadAll(resp.Body)
+		return resp.StatusCode, respBody
+	}
+
+	// 1. Create alice.
+	code, body := do(http.MethodPost, "/api/v1/users", map[string]any{
+		"profile": map[string]string{
+			"login":     "alice@example.com",
+			"email":     "alice@example.com",
+			"firstName": "Alice",
+			"lastName":  "Liddell",
+		},
+	})
+	if code != http.StatusOK {
+		t.Fatalf("create user = %d, body=%s", code, body)
+	}
+	var user struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(body, &user); err != nil {
+		t.Fatal(err)
+	}
+
+	// 2. Create engineers group.
+	code, body = do(http.MethodPost, "/api/v1/groups", map[string]any{
+		"profile": map[string]string{"name": "engineers"},
+	})
+	if code != http.StatusOK {
+		t.Fatalf("create group = %d, body=%s", code, body)
+	}
+	var group struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(body, &group); err != nil {
+		t.Fatal(err)
+	}
+
+	// 3. Add alice to engineers.
+	code, body = do(http.MethodPut,
+		"/api/v1/groups/"+group.ID+"/users/"+user.ID, nil)
+	if code != http.StatusNoContent {
+		t.Fatalf("add membership = %d, body=%s", code, body)
+	}
+
+	// 4. List members.
+	code, body = do(http.MethodGet,
+		"/api/v1/groups/"+group.ID+"/users", nil)
+	if code != http.StatusOK {
+		t.Fatalf("list members = %d, body=%s", code, body)
+	}
+	if !contains(string(body), user.ID) {
+		t.Errorf("members body missing %q: %s", user.ID, body)
+	}
+
+	// 5. Create SAML app.
+	code, body = do(http.MethodPost, "/api/v1/apps", map[string]any{
+		"label":      "Acme SAML",
+		"signOnMode": "SAML_2_0",
+	})
+	if code != http.StatusOK {
+		t.Fatalf("create app = %d, body=%s", code, body)
+	}
+	var app struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(body, &app); err != nil {
+		t.Fatal(err)
+	}
+
+	// 6. DELETE each resource. App must be deactivated first.
+	if code, body := do(http.MethodPost,
+		"/api/v1/apps/"+app.ID+"/lifecycle/deactivate", nil); code != http.StatusOK {
+		t.Fatalf("deactivate app = %d, body=%s", code, body)
+	}
+	for _, p := range []string{
+		"/api/v1/groups/" + group.ID + "/users/" + user.ID,
+		"/api/v1/apps/" + app.ID,
+		"/api/v1/groups/" + group.ID,
+		"/api/v1/users/" + user.ID,
+	} {
+		if code, body := do(http.MethodDelete, p, nil); code != http.StatusNoContent {
+			t.Errorf("DELETE %s = %d, body=%s", p, code, body)
+		}
+	}
 }
