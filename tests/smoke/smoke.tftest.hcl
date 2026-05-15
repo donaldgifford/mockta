@@ -8,21 +8,20 @@
 # the IDs mockta returns.
 
 variables {
-  mockta_image  = "ghcr.io/donaldgifford/mockta:dev"
-  tls_cert_path = ""
-  tls_key_path  = ""
+  mockta_image = "ghcr.io/donaldgifford/mockta:dev"
 }
 
-# Boot the sidecar and capture its outputs.
+# Boot the sidecar and capture its outputs. The setup module reads
+# the TLS material from /tmp/mockta-smoke-certs/ — CI populates that
+# directory before running the test; the same directory is what
+# `just test-smoke` uses locally.
 run "setup" {
   module {
     source = "./setup"
   }
 
   variables {
-    mockta_image  = var.mockta_image
-    tls_cert_path = var.tls_cert_path
-    tls_key_path  = var.tls_key_path
+    mockta_image = var.mockta_image
   }
 }
 

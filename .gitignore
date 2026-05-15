@@ -56,6 +56,8 @@ Thumbs.db
 
 # Smoke fixture's generated TLS material (per-run, ephemeral)
 tests/smoke/.certs/
+# Local smoke-test certs land in /tmp/mockta-smoke-certs; keep this
+# entry as a reminder if someone happens to symlink it under the repo.
 
 # Donald loop state (per-session, not source)
 .claude/donald-loop.local.md

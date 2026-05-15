@@ -26,14 +26,10 @@ variable "org_name" {
   description = "MOCKTA_ORG_NAME value surfaced via /api/v1/org."
 }
 
-variable "tls_cert_path" {
+variable "tls_cert_dir" {
   type        = string
-  description = "Absolute path on the host to a PEM cert whose SAN covers acme-smoke.localhost. Caddy reverse-proxies HTTPS:443 to mockta:8080 using this cert; the okta provider verifies it against a CA the runner already trusts."
-}
-
-variable "tls_key_path" {
-  type        = string
-  description = "Absolute path on the host to the matching PEM key for tls_cert_path."
+  default     = "/tmp/mockta-smoke-certs"
+  description = "Host directory containing server.crt + server.key (PEM) whose SAN covers acme-smoke.localhost. CI populates it before terraform test; locally, `just test-smoke` does the same."
 }
 
 variable "caddy_image" {
@@ -104,14 +100,14 @@ resource "docker_container" "caddy" {
 
   mounts {
     type      = "bind"
-    source    = var.tls_cert_path
+    source    = "${var.tls_cert_dir}/server.crt"
     target    = "/certs/server.crt"
     read_only = true
   }
 
   mounts {
     type      = "bind"
-    source    = var.tls_key_path
+    source    = "${var.tls_cert_dir}/server.key"
     target    = "/certs/server.key"
     read_only = true
   }

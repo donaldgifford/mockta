@@ -109,8 +109,9 @@ jobs:
       - name: Generate self-signed CA + server cert for smoke proxy
         run: |
           set -euo pipefail
-          mkdir -p tests/smoke/.certs
-          cd tests/smoke/.certs
+          sudo mkdir -p /tmp/mockta-smoke-certs
+          sudo chown "$(id -u):$(id -g)" /tmp/mockta-smoke-certs
+          cd /tmp/mockta-smoke-certs
           openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
             -keyout ca.key -out ca.crt \
             -subj "/CN=mockta-smoke-CA"
@@ -122,16 +123,17 @@ jobs:
             -subj "/CN=acme-smoke.localhost"
           openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key \
             -CAcreateserial -out server.crt -days 1 -extfile server.ext
+          # Caddy in the container runs as root and reads /certs/*
+          # via bind mount; make the files world-readable so the
+          # mount target is usable.
+          chmod 0644 server.crt server.key
 
       - name: Trust the smoke CA in the runner trust store
         run: |
-          sudo cp tests/smoke/.certs/ca.crt /usr/local/share/ca-certificates/mockta-smoke-ca.crt
+          sudo cp /tmp/mockta-smoke-certs/ca.crt /usr/local/share/ca-certificates/mockta-smoke-ca.crt
           sudo update-ca-certificates
 
       - name: Run terraform test
-        env:
-          TF_VAR_tls_cert_path: ${{ github.workspace }}/tests/smoke/.certs/server.crt
-          TF_VAR_tls_key_path: ${{ github.workspace }}/tests/smoke/.certs/server.key
         run: |
           cd tests/smoke/setup && terraform init -upgrade && cd -
           cd tests/smoke/module && terraform init -upgrade && cd -
