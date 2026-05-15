@@ -33,4 +33,6 @@ this project adheres to [Semantic Versioning](https://semver.org/).
 - *(docker)* Explicitly exclude test dirs from build context
 - Swap broken make call for just in test-go job
 - Bump smoke terraform to 1.10 so test-file modules resolve
+- Regenerate CHANGELOG.md from cliff
+- Add Apache-2.0 LICENSE
 
