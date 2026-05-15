@@ -37,17 +37,17 @@ run "apply_module" {
   }
 
   assert {
-    condition     = run.apply_module.user_id != ""
+    condition     = output.user_id != ""
     error_message = "okta_user.alice.id is empty — provider didn't get an ID back"
   }
 
   assert {
-    condition     = run.apply_module.group_id != ""
+    condition     = output.group_id != ""
     error_message = "okta_group.engineers.id is empty"
   }
 
   assert {
-    condition     = run.apply_module.app_id != ""
+    condition     = output.app_id != ""
     error_message = "okta_app_saml.acme_saml.id is empty"
   }
 }
