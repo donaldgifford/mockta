@@ -16,6 +16,10 @@ this project adheres to [Semantic Versioning](https://semver.org/).
 - *(tests)* Add contract suite and terraform-test smoke fixture
 - *(gaps)* Add gap-list determinism golden test
 
+### Bug Fixes
+
+- *(smoke)* Replace run.<self> with output.* in apply_module asserts
+
 ### Documentation
 
 - Add v0 planning docs (RFC-0001, DESIGN-0001/0002, IMPL-0001)
