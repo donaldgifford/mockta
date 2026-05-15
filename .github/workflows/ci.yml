@@ -73,6 +73,9 @@ jobs:
       - name: Run contract suite
         run: cd tests/contract && go test ./... -race
 
+      - name: Run gap-golden (undersized build tag)
+        run: cd tests/contract && go test -tags mockta_v0_undersized -run TestGapGolden ./...
+
   smoke:
     name: Smoke (terraform test)
     runs-on: ubuntu-latest

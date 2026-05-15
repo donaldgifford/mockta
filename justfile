@@ -123,6 +123,19 @@ fmt:
 test-contract:
     @cd tests/contract && go test ./... -race
 
+# Run the gap-list determinism golden test. Uses the
+# mockta_v0_undersized build tag which disables the groups handlers
+# so every group endpoint 501s with a deterministic gap ID. Compares
+# the observed sequence against tests/contract/testdata/gap-golden.txt.
+# Re-seed with `just test-gap-golden-update`.
+[group('test')]
+test-gap-golden:
+    @cd tests/contract && go test -tags mockta_v0_undersized -run TestGapGolden ./...
+
+[group('test')]
+test-gap-golden-update:
+    @cd tests/contract && go test -tags mockta_v0_undersized -run TestGapGolden -update ./...
+
 # Run the terraform-test smoke fixture. Requires the mockta image to
 # be loaded into the local Docker daemon (run `just docker-build`
 # first). The fixture spins up the sidecar via the docker provider

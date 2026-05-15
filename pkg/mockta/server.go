@@ -191,18 +191,14 @@ func (s *Server) apiHandler() http.Handler {
 	mux.Handle("POST /api/v1/users/{id}/lifecycle/deactivate",
 		handlers.NewUsersDeactivate(s.store))
 
-	// Groups + memberships
-	mux.Handle("POST /api/v1/groups", handlers.NewGroupsCreate(s.store))
-	mux.Handle("GET /api/v1/groups", handlers.NewGroupsList(s.store))
-	mux.Handle("GET /api/v1/groups/{id}", handlers.NewGroupsGet(s.store))
-	mux.Handle("PUT /api/v1/groups/{id}", handlers.NewGroupsUpdate(s.store))
-	mux.Handle("DELETE /api/v1/groups/{id}", handlers.NewGroupsDelete(s.store))
-	mux.Handle("PUT /api/v1/groups/{gid}/users/{uid}",
-		handlers.NewGroupMembershipAdd(s.store))
-	mux.Handle("DELETE /api/v1/groups/{gid}/users/{uid}",
-		handlers.NewGroupMembershipRemove(s.store))
-	mux.Handle("GET /api/v1/groups/{gid}/users",
-		handlers.NewGroupMembershipList(s.store))
+	// Groups + memberships — wired in a separate function so the
+	// `mockta_v0_undersized` build tag (CI-only image variant used by
+	// the gap-golden test) can swap in a no-op stub. With the stub,
+	// every /api/v1/groups* request falls through to the 501
+	// catch-all and lands in the gap registry, which lets the
+	// gap-list determinism golden file pin down the exact MOCKTA_GAP_*
+	// sequence the provider observes.
+	wireGroupRoutes(mux, s.store)
 
 	// Apps
 	mux.Handle("POST /api/v1/apps", handlers.NewAppsCreate(s.store))

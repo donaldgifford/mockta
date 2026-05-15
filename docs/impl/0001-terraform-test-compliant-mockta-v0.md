@@ -497,12 +497,21 @@ the container-shape end-to-end.
 
 **Gap-list determinism (`tests/smoke/gap-golden/`)**
 
-- [ ] Deferred to a follow-up — requires a CI-only image variant
-      built with `//go:build mockta_v0_undersized`. The build-tag
-      slice and golden fixture are isolated work that doesn't gate
-      v0.1.0; tracked separately. Quirks scaffolding is in place
-      (`tests/contract/quirks/README.md`) ready for fixtures as
-      provider oddities surface.
+- [x] `pkg/mockta/groups_routes.go` (production) and
+      `pkg/mockta/groups_routes_undersized.go` (no-op under
+      `//go:build mockta_v0_undersized`) split the group-route
+      wiring so the undersized build drops them entirely. The
+      production image is never built with this tag.
+- [x] `tests/contract/gap_golden_test.go` (also tag-gated) exercises
+      a fixed sequence of requests against the undersized build
+      and captures the `X-Mockta-Gap` header values, diffing
+      against `tests/contract/testdata/gap-golden.txt`. Re-seed
+      with `just test-gap-golden-update`.
+- [x] `just test-gap-golden` recipe + a `Run gap-golden (undersized
+      build tag)` step on the contract CI job.
+- [x] Quirks scaffolding remains in place
+      (`tests/contract/quirks/README.md`) for organic provider-quirk
+      fixtures as they surface.
 
 #### Success Criteria
 
