@@ -12,6 +12,7 @@ The Go module is `github.com/donaldgifford/mockta`, Go 1.26.2 (mise-resolved). L
 - `internal/cli/` — cobra subcommand tree (root, serve, healthcheck, version, logger setup). Deliberate departure from `cmd/mockta/cmd/` — keeps `cmd/` minimal and the CLI package importable.
 - `internal/config/` — env-var driven `Config` loader. No viper; v0 is env-only.
 - `pkg/mockta/` — `Server` with `Start`/`Stop`. Public package but the Go API is not yet stable — downstream consumers should use the container.
+- `internal/store/` — hashicorp/go-memdb persistence layer. Domain types (User, Group, App, GroupMembership, AuditEntry) stored with raw-JSON `Profile`/`Settings` blobs. Sentinel errors `ErrNotFound` / `ErrConflict` are the contract handlers map to HTTP statuses. IDs are deterministic SHA-256 → base32 → 20 chars; AuditEntry.ID is a monotonic uint64 (not a ULID).
 
 ## Common commands
 
