@@ -15,6 +15,7 @@ this project adheres to [Semantic Versioning](https://semver.org/).
 - *(docker)* Verify Phase 6 container release pipeline
 - *(tests)* Add contract suite and terraform-test smoke fixture
 - *(gaps)* Add gap-list determinism golden test
+- *(smoke)* TLS-terminate via caddy so okta provider can dial :443
 
 ### Bug Fixes
 
