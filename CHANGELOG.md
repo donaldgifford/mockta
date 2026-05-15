@@ -20,6 +20,7 @@ this project adheres to [Semantic Versioning](https://semver.org/).
 ### Bug Fixes
 
 - *(smoke)* Replace run.<self> with output.* in apply_module asserts
+- *(smoke)* Hardcode /tmp/mockta-smoke-certs as cert location
 
 ### Documentation
 
