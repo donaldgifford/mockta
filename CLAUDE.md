@@ -13,6 +13,11 @@ The Go module is `github.com/donaldgifford/mockta`, Go 1.26.2 (mise-resolved). L
 - `internal/config/` — env-var driven `Config` loader. No viper; v0 is env-only.
 - `pkg/mockta/` — `Server` with `Start`/`Stop`. Public package but the Go API is not yet stable — downstream consumers should use the container.
 - `internal/store/` — hashicorp/go-memdb persistence layer. Domain types (User, Group, App, GroupMembership, AuditEntry) stored with raw-JSON `Profile`/`Settings` blobs. Sentinel errors `ErrNotFound` / `ErrConflict` are the contract handlers map to HTTP statuses. IDs are deterministic SHA-256 → base32 → 20 chars; AuditEntry.ID is a monotonic uint64 (not a ULID).
+- `internal/oktaerr/` — Okta-shaped error envelope writer. `errorId` is always `mockta-<hex>` so failures are obvious in provider logs.
+- `internal/middleware/` — `Auth` (constant-time bearer match, strict + permissive modes), `Audit` (writes every request into the store; gap IDs flow via the `X-Mockta-Gap` response header which the middleware strips), `Chain` composer, `EmitNextLink` helper. Empty `MOCKTA_ADMIN_TOKEN` disables auth entirely — useful for scripts.
+- `internal/handlers/` — non-resource handlers (`Org`, `Health`, `AdminReset`, `NotImplemented`). Resource handlers (users/groups/apps) arrive in Phase 4.
+- `internal/gaps/` — `Registry` interface + `StubRegistry`. Phase 5 replaces the stub with a populated registry and adds `mockta gaps` CLI subcommands.
+- `pkg/mockta/` — `Server` opens `:8080` (API) and `:9090` (admin/health); graceful shutdown via `context.WithoutCancel` so canceled parents don't skip the drain window.
 
 ## Common commands
 

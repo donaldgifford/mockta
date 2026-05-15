@@ -208,37 +208,45 @@ come in Phase 4 — this phase proves the plumbing.
 
 #### Tasks
 
-- [ ] Implement `pkg/mockta/server.go` `Start(ctx) error` that opens
+- [x] Implement `pkg/mockta/server.go` `Start(ctx) error` that opens
       two listeners: `:8080` (Okta API) and `:9090`
-      (health/admin/metrics).
-- [ ] Wire `net/http.ServeMux` into both listeners (Go 1.22+ method +
+      (health/admin/metrics). Includes graceful shutdown via a
+      detached context so canceled parents don't skip the drain
+      window.
+- [x] Wire `net/http.ServeMux` into both listeners (Go 1.22+ method +
       path-pattern matching).
-- [ ] Implement `internal/middleware/auth.go` — Bearer token check
-      against `cfg.AdminToken`. Strict mode: exact-match against
-      `MOCKTA_ADMIN_TOKEN`. Permissive mode: any non-empty `Bearer`
-      header accepted.
-- [ ] Implement `internal/middleware/errors.go` — error envelope
-      writer that emits Okta's `ErrorResponse` shape with
-      `errorId="mockta-<uuid>"`.
-- [ ] Implement `internal/middleware/audit.go` — every request writes
-      an `AuditEntry` (method, path, status, gap_id).
-- [ ] Implement `internal/middleware/pagination.go` — utilities to
-      emit `Link: <...>; rel="next"` headers (always empty cursor in
-      v0; handlers opt-in).
-- [ ] Implement `internal/handlers/org.go` — `GET /api/v1/org`
+- [x] Implement `internal/middleware/auth.go` — Bearer token check
+      against `cfg.AdminToken`. Strict mode: exact-match (constant
+      time). Permissive mode: any non-empty `Bearer` header accepted.
+- [x] Implement error envelope writer in `internal/oktaerr/` (clean
+      package boundary instead of `internal/middleware/errors.go` —
+      it's a helper, not middleware, called from handlers + middleware
+      alike). Okta's `ErrorResponse` shape with
+      `errorId="mockta-<hex>"`.
+- [x] Implement `internal/middleware/audit.go` — every request writes
+      an `AuditEntry` (method, path, status, gap_id). Audit failure
+      is silent (intentional `//nolint:errcheck` with rationale).
+      Gap ID flows via `X-Mockta-Gap` response header, which the
+      middleware strips before the response leaves.
+- [x] Implement `internal/middleware/pagination.go` — `EmitNextLink`
+      helper for `Link: <...>; rel="next"` headers.
+- [x] Implement `internal/handlers/org.go` — `GET /api/v1/org`
       returning a plausible Org JSON keyed by `cfg.OrgName`.
-- [ ] Implement `internal/handlers/health.go` — `GET /health`,
-      checks store readiness, returns 200. Unauthenticated.
-- [ ] Implement `internal/handlers/admin.go` — `POST /admin/reset`
+- [x] Implement `internal/handlers/health.go` — `GET /health`,
+      returns 200 unconditionally. Unauthenticated. Marshal-once
+      static body for alloc-free serving.
+- [x] Implement `internal/handlers/admin.go` — `POST /admin/reset`
       calling `Store.Reset()`. Requires `MOCKTA_ADMIN_TOKEN`; future
       `/metrics` on the same port stays unauthenticated.
-- [ ] Implement `internal/handlers/notimplemented.go` — catch-all
+- [x] Implement `internal/handlers/notimplemented.go` — catch-all
       that emits a 501 with a `MOCKTA_GAP_<NNNN>` error code,
-      consulting the gap registry (Phase 5 fills it in; Phase 3 stubs
-      the registry interface).
-- [ ] Wire all of the above through `pkg/mockta.Server`.
-- [ ] `httptest`-based unit tests for each middleware and the
-      non-resource handlers.
+      consulting the `internal/gaps.Registry` interface. Phase 3
+      ships `gaps.StubRegistry` returning `MOCKTA_GAP_UNCATALOGED`;
+      Phase 5 swaps in the populated registry.
+- [x] Wire all of the above through `pkg/mockta.Server`.
+- [x] `httptest`-based unit tests for each middleware and the
+      non-resource handlers; end-to-end server tests for the
+      two-listener stack.
 
 #### Success Criteria
 

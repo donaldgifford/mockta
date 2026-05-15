@@ -61,7 +61,11 @@ func Load() (Config, error) {
 		LogLevel:   DefaultLogLevel,
 	}
 
-	if v, ok := os.LookupEnv(EnvStrictMode); ok {
+	// Empty-string and unset are both treated as "use the default"
+	// — an explicitly-empty `MOCKTA_STRICT_MODE=` is the same as
+	// not setting it at all. strconv.ParseBool rejects "" outright,
+	// so the explicit check avoids surfacing a confusing error.
+	if v := os.Getenv(EnvStrictMode); v != "" {
 		parsed, err := strconv.ParseBool(v)
 		if err != nil {
 			return Config{}, fmt.Errorf("parse %s=%q: %w", EnvStrictMode, v, err)
@@ -69,7 +73,7 @@ func Load() (Config, error) {
 		cfg.StrictMode = parsed
 	}
 
-	if v, ok := os.LookupEnv(EnvLogLevel); ok {
+	if v := os.Getenv(EnvLogLevel); v != "" {
 		level, err := parseLogLevel(v)
 		if err != nil {
 			return Config{}, fmt.Errorf("parse %s: %w", EnvLogLevel, err)
@@ -80,8 +84,11 @@ func Load() (Config, error) {
 	return cfg, nil
 }
 
+// lookupOrDefault returns the env var's value when set to a non-empty
+// string; otherwise returns def. An explicitly-empty env (`X=`) is
+// treated the same as unset, matching the rest of the parser.
 func lookupOrDefault(env, def string) string {
-	if v, ok := os.LookupEnv(env); ok {
+	if v := os.Getenv(env); v != "" {
 		return v
 	}
 	return def
