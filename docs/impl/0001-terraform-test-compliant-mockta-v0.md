@@ -105,26 +105,30 @@ exposes a `Run` hook stubbed out for Phase 3.
 
 #### Tasks
 
-- [ ] `go mod init github.com/donaldgifford/mockta`.
-- [ ] Pin Go toolchain to `mise.toml`'s `go = "latest"` resolution;
-      commit `go.mod` / `go.sum`.
-- [ ] Add core deps: `github.com/spf13/cobra`,
+- [x] `go mod init github.com/donaldgifford/mockta`.
+- [x] Pin Go toolchain to `mise.toml`'s `go = "latest"` resolution;
+      commit `go.mod` / `go.sum`. (Resolved to Go 1.26.2.)
+- [x] Add core deps: `github.com/spf13/cobra`,
       `github.com/hashicorp/go-memdb`. Router and logging are stdlib
-      only (`net/http.ServeMux` from Go 1.22+, `log/slog`).
-- [ ] Replace `cmd/mockta/main.go` stub with a cobra root command and
+      only (`net/http.ServeMux` from Go 1.22+, `log/slog`). *(cobra
+      added now; go-memdb lands when first imported in Phase 2 — `go
+      mod tidy` removes unused deps.)*
+- [x] Replace `cmd/mockta/main.go` stub with a cobra root command and
       three subcommands: `serve` (default), `healthcheck`, `version`.
-- [ ] Wire `-ldflags "-X main.version=... -X main.commit=..."` (the
+      Subcommand wiring lives in `internal/cli/` (cleaner Go layout
+      than `cmd/mockta/cmd/`; see File Changes table).
+- [x] Wire `-ldflags "-X main.version=... -X main.commit=..."` (the
       `justfile` already injects these) into `mockta version`.
-- [ ] Set up `log/slog`-based structured logging (default `info`,
+- [x] Set up `log/slog`-based structured logging (default `info`,
       `MOCKTA_LOG_LEVEL` env override).
-- [ ] Add `internal/config` package: load env vars
+- [x] Add `internal/config` package: load env vars
       (`MOCKTA_ADMIN_TOKEN`, `MOCKTA_ORG_NAME`, `MOCKTA_STRICT_MODE`,
       `MOCKTA_LOG_LEVEL`) into a typed `Config` struct via
       `os.Getenv` — no viper.
-- [ ] Stub `pkg/mockta/server.go` with `New(cfg) *Server` returning a
+- [x] Stub `pkg/mockta/server.go` with `New(cfg) *Server` returning a
       Server with a no-op `Start(ctx)` / `Stop()` so Phase 3 can fill
       it in.
-- [ ] Add `mockta healthcheck` implementation: HTTP GET
+- [x] Add `mockta healthcheck` implementation: HTTP GET
       `http://localhost:9090/health`, exit 0 on 200 else 1. Used by
       Dockerfile `HEALTHCHECK` and `docker_container.healthcheck`.
 
@@ -540,7 +544,7 @@ work end-to-end.
 | ----------------------------------------------- | ------ | ----- | ------------------------------------------------------------ |
 | `go.mod`, `go.sum`                              | Create | 1     | Module init + dep manifest.                                  |
 | `cmd/mockta/main.go`                            | Modify | 1     | Replace stub with cobra root + serve/healthcheck/version.    |
-| `cmd/mockta/cmd/*.go`                           | Create | 1, 5  | Cobra subcommands.                                           |
+| `internal/cli/{root,serve,healthcheck,version,logger}.go` | Create | 1, 5 | Cobra subcommand wiring + slog setup. (Departure from the original `cmd/mockta/cmd/` location — keeps `cmd/` minimal per Go conventions.) |
 | `internal/config/config.go`                     | Create | 1     | Env-var driven config struct.                                |
 | `pkg/mockta/server.go`, `options.go`            | Create | 1, 3  | `New(cfg) *Server`; `Start(ctx)`, `Stop()`.                  |
 | `internal/store/schema.go`, `types.go`, `*.go`  | Create | 2     | go-memdb schema + typed accessors.                           |

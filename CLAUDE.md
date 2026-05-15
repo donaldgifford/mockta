@@ -4,7 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-`mockta` is a lightweight, embeddable Okta mock for Terraform acceptance tests and Go service tests. The repo is in early scaffolding — `cmd/mockta/main.go` contains only a package declaration and there is no `go.mod` yet. Tooling, CI, release, and docs scaffolding are fully wired before application code is written.
+`mockta` is a lightweight, embeddable Okta mock for Terraform acceptance tests and Go service tests. v0 implementation tracks IMPL-0001 (Phase 1 scaffolding complete — module initialized, CLI + config + server stub in place). DESIGN-0001 specs the mockta surface; DESIGN-0002 specs the libtftest adapter; RFC-0001 is the umbrella.
+
+The Go module is `github.com/donaldgifford/mockta`, Go 1.26.2 (mise-resolved). Layout:
+
+- `cmd/mockta/main.go` — thin entry point; only holds `version`/`commit` ldflag vars and calls `cli.NewRootCmd`.
+- `internal/cli/` — cobra subcommand tree (root, serve, healthcheck, version, logger setup). Deliberate departure from `cmd/mockta/cmd/` — keeps `cmd/` minimal and the CLI package importable.
+- `internal/config/` — env-var driven `Config` loader. No viper; v0 is env-only.
+- `pkg/mockta/` — `Server` with `Start`/`Stop`. Public package but the Go API is not yet stable — downstream consumers should use the container.
 
 ## Common commands
 
