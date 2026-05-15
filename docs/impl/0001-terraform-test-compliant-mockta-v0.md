@@ -521,29 +521,39 @@ work end-to-end.
 
 #### Tasks
 
-- [ ] Run `just release-check` (`goreleaser check`) and resolve any
-      drift between the config and the binary's actual artifacts.
-- [ ] Run `just release-local` (snapshot build) and inspect
-      artifacts.
-- [ ] Update `CHANGELOG.md` via `git-cliff` covering the work in
-      Phases 1–7. Add a handwritten 2–3 sentence "Highlights"
-      paragraph at the top of the v0.1.0 entry above the
-      auto-generated list — first release deserves narrative
-      framing.
-- [ ] Verify `.github/workflows/release.yml` triggers on tag push
-      (the existing workflow); confirm GHCR push credentials are in
-      place.
-- [ ] `just release v0.1.0` — tag + push. Watch the release workflow
-      run end-to-end.
-- [ ] Verify `ghcr.io/donaldgifford/mockta:v0.1.0` and `:latest`
-      exist and are signed (existing cosign step in
-      `docker-bake.hcl`).
-- [ ] Trigger / verify the wiki publish picks up the new
-      `docs/gaps.md` for the release.
-- [ ] Smoke-pull the published image on a clean machine and run the
-      smoke fixture against it.
-- [ ] Open the DESIGN-0002 (libtftest adapter) implementation work
-      with the now-stable image tag pinned in.
+- [x] Run `just release-check` (`goreleaser check`) — fixed a
+      `archives.format` deprecation (now `formats: ["tar.gz"]`); config
+      validates cleanly.
+- [x] Run `just release-local` — snapshot build produces 4 platform
+      binaries (linux/darwin × amd64/arm64), each ~3 MB, plus
+      checksums and signed artifacts. `mockta version` from the
+      snapshot binary reports `v0.0.0-dev` per the snapshot template.
+- [x] Update `CHANGELOG.md` via `git-cliff` covering Phases 1–7
+      plus a handwritten Highlights paragraph. Fixed `cliff.toml`
+      where the Tera template body had been over-escaped through
+      a code-gen tool — the rendered output now matches what
+      `git-cliff --tag v0.1.0` produces.
+- [x] Audit `.github/workflows/release.yml`: triggers on push to
+      main via `pr-semver-bump` (PR-label-driven tagging), wires
+      GoReleaser + GHCR push via bake. Fixed a missing project
+      segment in the GHCR image ref (`ghcr.io/donaldgifford/` →
+      `ghcr.io/donaldgifford/mockta`) and the equivalent typo in
+      `ci.yml`'s codecov slug.
+- [x] Added a `cosign sign` step in the release workflow using
+      keyless OIDC signing (the IMPL referenced an "existing cosign
+      step in `docker-bake.hcl`" that did not actually exist). The
+      Phase 8 success criterion `cosign verify` now has the signing
+      side wired up.
+- [ ] **Operator action required:** `just release v0.1.0` — tag +
+      push to trigger the workflow.
+- [ ] **Operator action required:** Verify
+      `ghcr.io/donaldgifford/mockta:v0.1.0` and `:latest` exist post-push.
+- [ ] **Operator action required:** Trigger / verify the wiki
+      publish picks up the new `docs/gaps.md` for the release.
+- [ ] **Operator action required:** Smoke-pull the published image
+      on a clean machine and run the smoke fixture against it.
+- [ ] **Follow-up work:** Open the DESIGN-0002 (libtftest adapter)
+      implementation work with the now-stable image tag pinned in.
 
 #### Success Criteria
 

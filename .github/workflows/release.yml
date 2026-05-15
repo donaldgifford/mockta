@@ -12,6 +12,9 @@ permissions:
   packages: write
   issues: read
   pull-requests: read
+  # id-token: write is required for keyless cosign signing via the
+  # GitHub OIDC provider. Scoped to this workflow only.
+  id-token: write
 
 jobs:
   bump-version:
@@ -97,13 +100,14 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/donaldgifford/
+          images: ghcr.io/donaldgifford/mockta
           tags: |
             type=semver,pattern={{version}},value=${{ needs.bump-version.outputs.tag }}
             type=semver,pattern={{major}}.{{minor}},value=${{ needs.bump-version.outputs.tag }}
             type=raw,value=latest
 
       - name: Build and push Docker images
+        id: bake
         uses: docker/bake-action@v6
         with:
           targets: release
@@ -115,3 +119,19 @@ jobs:
           set: |-
             *.cache-from=type=gha
             *.cache-to=type=gha,mode=max
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      # Keyless signing via GitHub OIDC — no key material in repo
+      # secrets. The signature lands in the OCI registry alongside the
+      # image and is verifiable with
+      # `cosign verify --certificate-identity-regexp=... <image>`.
+      - name: Sign published images with cosign
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          for tag in $TAGS; do
+            echo "Signing $tag"
+            cosign sign --yes "$tag"
+          done
