@@ -340,15 +340,32 @@ func TestUsersDelete(t *testing.T) {
 
 	mux := http.NewServeMux()
 	mux.Handle("DELETE /api/v1/users/{id}", NewUsersDelete(s))
-	r := httptest.NewRecorder()
-	req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete,
-		"/api/v1/users/"+created.ID, http.NoBody)
-	mux.ServeHTTP(r, req)
-	if r.Code != http.StatusNoContent {
-		t.Errorf("status = %d, want 204", r.Code)
+
+	// Real Okta requires two DELETEs: the first deactivates, the
+	// second removes. mockta mirrors that so the okta terraform
+	// provider's destroy path works.
+	doDelete := func() *httptest.ResponseRecorder {
+		r := httptest.NewRecorder()
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete,
+			"/api/v1/users/"+created.ID, http.NoBody)
+		mux.ServeHTTP(r, req)
+		return r
+	}
+
+	r1 := doDelete()
+	if r1.Code != http.StatusNoContent {
+		t.Errorf("first delete status = %d, want 204", r1.Code)
+	}
+	if _, err := s.GetUser(created.ID); err != nil {
+		t.Errorf("user gone after first delete; want it to be DEPROVISIONED still in store: %v", err)
+	}
+
+	r2 := doDelete()
+	if r2.Code != http.StatusNoContent {
+		t.Errorf("second delete status = %d, want 204", r2.Code)
 	}
 	if _, err := s.GetUser(created.ID); err == nil {
-		t.Error("user still present after delete")
+		t.Error("user still present after second delete")
 	}
 }
 

@@ -69,6 +69,10 @@ resource "okta_app_saml" "acme_saml" {
   signature_algorithm      = "RSA_SHA256"
   digest_algorithm         = "SHA256"
   authn_context_class_ref  = "urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport"
+  # okta/okta provider requires at least one of these on a custom SAML
+  # app or it rejects the resource before sending any request.
+  response_signed  = true
+  assertion_signed = true
 }
 
 output "user_id" {

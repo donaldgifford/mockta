@@ -212,14 +212,30 @@ func newUserLifecycle(s *store.Store, target string) http.Handler {
 
 // NewUsersDelete handles DELETE /api/v1/users/{id}.
 //
-// Okta requires two deletes to actually destroy: the first sets the
-// user to DEPROVISIONED, the second removes the row. v0 collapses
-// this — DELETE always removes the row regardless of current status,
-// because the provider's `okta_user` resource calls DELETE once and
-// expects it to stick.
+// Real Okta requires two DELETE calls to destroy a user: the first
+// deactivates (ACTIVE/PROVISIONED → DEPROVISIONED, 204, row stays);
+// the second removes the row (204). The okta terraform provider
+// emits both during destroy. We mirror that protocol so the smoke
+// fixture's teardown does not see a spurious 404 on the second
+// DELETE.
 func NewUsersDelete(s *store.Store) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
+		u, err := s.GetUser(id)
+		if err != nil {
+			writeStoreError(w, err)
+			return
+		}
+		if u.Status != userStatusDeprovisioned {
+			u.Status = userStatusDeprovisioned
+			u.UpdatedAt = time.Now().UTC()
+			if err := s.UpdateUser(u); err != nil {
+				writeStoreError(w, err)
+				return
+			}
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
 		if err := s.DeleteUser(id); err != nil {
 			writeStoreError(w, err)
 			return
