@@ -1,0 +1,9 @@
+{
+	auto_https off
+	admin off
+}
+
+:443 {
+	tls /certs/server.crt /certs/server.key
+	reverse_proxy http://mockta:8080
+}

@@ -8,7 +8,9 @@
 # the IDs mockta returns.
 
 variables {
-  mockta_image = "ghcr.io/donaldgifford/mockta:dev"
+  mockta_image  = "ghcr.io/donaldgifford/mockta:dev"
+  tls_cert_path = ""
+  tls_key_path  = ""
 }
 
 # Boot the sidecar and capture its outputs.
@@ -18,7 +20,9 @@ run "setup" {
   }
 
   variables {
-    mockta_image = var.mockta_image
+    mockta_image  = var.mockta_image
+    tls_cert_path = var.tls_cert_path
+    tls_key_path  = var.tls_key_path
   }
 }
 

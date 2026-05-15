@@ -33,13 +33,12 @@ variable "okta_api_token" {
 
 provider "okta" {
   org_name = var.okta_org_name
-  # base_url is the host (no scheme); the provider builds the URL
-  # internally. Point it at the mockta sidecar via host:port.
-  base_url  = replace(var.okta_base_url, "http://", "")
+  # base_url is the bare host (no scheme, no port). The provider
+  # builds `https://<org_name>.<base_url>` and dials :443. The smoke
+  # fixture's caddy sidecar listens on :443 with a cert whose SAN
+  # covers <org_name>.localhost and reverse-proxies to mockta:8080.
+  base_url  = var.okta_base_url
   api_token = var.okta_api_token
-
-  # Skip the version-check call — mockta doesn't implement it.
-  http_proxy = ""
 }
 
 resource "okta_user" "alice" {

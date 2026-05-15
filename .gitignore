@@ -54,5 +54,8 @@ Thumbs.db
 .terraform/
 .terraform.lock.hcl
 
+# Smoke fixture's generated TLS material (per-run, ephemeral)
+tests/smoke/.certs/
+
 # Donald loop state (per-session, not source)
 .claude/donald-loop.local.md

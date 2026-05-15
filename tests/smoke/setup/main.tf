@@ -1,15 +1,3 @@
-# mockta smoke-test setup module.
-#
-# Starts a mockta container as a sidecar via the docker provider,
-# exposes random host ports for the API (:8080) and admin (:9090)
-# listeners, and waits for the in-binary healthcheck to pass. The
-# top-level smoke.tftest.hcl wires the outputs into the
-# module-under-test as variables.
-#
-# Image tag is parameterized so CI can build a per-PR image (e.g.
-# `ghcr.io/donaldgifford/mockta:sha-<commit>`) and run the smoke
-# fixture against it without modifying this file.
-
 terraform {
   required_version = ">= 1.7.0"
   required_providers {
@@ -38,6 +26,26 @@ variable "org_name" {
   description = "MOCKTA_ORG_NAME value surfaced via /api/v1/org."
 }
 
+variable "tls_cert_path" {
+  type        = string
+  description = "Absolute path on the host to a PEM cert whose SAN covers acme-smoke.localhost. Caddy reverse-proxies HTTPS:443 to mockta:8080 using this cert; the okta provider verifies it against a CA the runner already trusts."
+}
+
+variable "tls_key_path" {
+  type        = string
+  description = "Absolute path on the host to the matching PEM key for tls_cert_path."
+}
+
+variable "caddy_image" {
+  type        = string
+  default     = "caddy:2.8-alpine"
+  description = "Caddy image used for TLS termination in front of mockta."
+}
+
+resource "docker_network" "smoke" {
+  name = "mockta-smoke-${terraform.workspace}"
+}
+
 resource "docker_container" "mockta" {
   image = var.mockta_image
   name  = "mockta-smoke-${terraform.workspace}"
@@ -47,18 +55,11 @@ resource "docker_container" "mockta" {
     "MOCKTA_ORG_NAME=${var.org_name}",
   ]
 
-  ports {
-    internal = 8080
-    external = 0
-  }
-  ports {
-    internal = 9090
-    external = 0
+  networks_advanced {
+    name    = docker_network.smoke.name
+    aliases = ["mockta"]
   }
 
-  # Terraform 1.7+ blocks the run until the container reports healthy.
-  # The Dockerfile's HEALTHCHECK calls `mockta healthcheck`, which
-  # probes :9090/health and exits non-zero on failure.
   healthcheck {
     test         = ["CMD", "/mockta", "healthcheck"]
     interval     = "1s"
@@ -67,9 +68,67 @@ resource "docker_container" "mockta" {
   }
 }
 
+resource "docker_image" "caddy" {
+  name         = var.caddy_image
+  keep_locally = true
+}
+
+# Caddy terminates TLS in front of mockta. The okta terraform
+# provider hard-builds URLs as `https://<org>.<base_url>` and
+# defaults the port to 443; it will not speak plain HTTP. So we
+# put a TLS terminator on host :443 that reverse-proxies to
+# mockta:8080 on the docker network. The cert/key are generated
+# out-of-band in CI (or by `just docker-smoke-tls`) and bind-mounted
+# in.
+resource "docker_container" "caddy" {
+  image = docker_image.caddy.image_id
+  name  = "caddy-smoke-${terraform.workspace}"
+
+  depends_on = [docker_container.mockta]
+
+  networks_advanced {
+    name = docker_network.smoke.name
+  }
+
+  ports {
+    internal = 443
+    external = 443
+  }
+
+  mounts {
+    type      = "bind"
+    source    = abspath("${path.module}/Caddyfile")
+    target    = "/etc/caddy/Caddyfile"
+    read_only = true
+  }
+
+  mounts {
+    type      = "bind"
+    source    = var.tls_cert_path
+    target    = "/certs/server.crt"
+    read_only = true
+  }
+
+  mounts {
+    type      = "bind"
+    source    = var.tls_key_path
+    target    = "/certs/server.key"
+    read_only = true
+  }
+
+  command = ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+
+  healthcheck {
+    test         = ["CMD", "wget", "-q", "--no-check-certificate", "-O", "-", "https://localhost/health"]
+    interval     = "1s"
+    retries      = 30
+    start_period = "1s"
+  }
+}
+
 output "mockta_base_url" {
-  value       = "http://localhost:${docker_container.mockta.ports[0].external}"
-  description = "Provider base_url — points at the API listener."
+  value       = "localhost"
+  description = "Provider base_url. The okta provider builds <org_name>.<base_url> and dials :443, which is where Caddy listens."
 }
 
 output "okta_org_name" {
