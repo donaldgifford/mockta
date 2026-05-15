@@ -91,6 +91,34 @@ func NewUsersCreate(s *store.Store, strict bool) http.Handler {
 	})
 }
 
+// NewUsersMe handles GET /api/v1/users/me.
+//
+// The okta terraform provider hits this endpoint during provider
+// configure to validate that the API token is good and the org is
+// reachable. Real Okta returns the authenticated user's profile; we
+// don't model real users behind a token, so we synthesize a stable
+// admin-shaped response. The provider only checks for a 200 and a
+// non-empty ID field.
+func NewUsersMe() http.Handler {
+	body := userResponse{
+		ID:          "mockta-admin",
+		Status:      userStatusActive,
+		Created:     time.Unix(0, 0).UTC(),
+		LastUpdated: time.Unix(0, 0).UTC(),
+		Profile: json.RawMessage(`{` +
+			`"firstName":"Mockta",` +
+			`"lastName":"Admin",` +
+			`"login":"admin@mockta.local",` +
+			`"email":"admin@mockta.local"` +
+			`}`),
+	}
+	activated := body.Created
+	body.Activated = &activated
+	return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, body)
+	})
+}
+
 // NewUsersGet handles GET /api/v1/users/{id_or_login}.
 //
 // Okta accepts either the user ID or the login as the path segment;

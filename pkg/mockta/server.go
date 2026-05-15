@@ -182,6 +182,10 @@ func (s *Server) apiHandler() http.Handler {
 	mux.Handle("POST /api/v1/users",
 		handlers.NewUsersCreate(s.store, s.cfg.StrictMode))
 	mux.Handle("GET /api/v1/users", handlers.NewUsersList(s.store))
+	// /me must be registered before /{idOrLogin} so it claims the path
+	// — ServeMux's longer-pattern-wins rule keeps the synthetic admin
+	// out of the lookup-by-id codepath.
+	mux.Handle("GET /api/v1/users/me", handlers.NewUsersMe())
 	mux.Handle("GET /api/v1/users/{idOrLogin}", handlers.NewUsersGet(s.store))
 	mux.Handle("PUT /api/v1/users/{id}",
 		handlers.NewUsersUpdate(s.store, s.cfg.StrictMode))
