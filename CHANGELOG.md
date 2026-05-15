@@ -24,6 +24,7 @@ this project adheres to [Semantic Versioning](https://semver.org/).
 - *(smoke)* Replace run.<self> with output.* in apply_module asserts
 - *(smoke)* Hardcode /tmp/mockta-smoke-certs as cert location
 - Two-step DELETE for users + sign SAML response in smoke fixture
+- *(smoke)* Drop okta_app_saml from v0 fixture
 
 ### Documentation
 
