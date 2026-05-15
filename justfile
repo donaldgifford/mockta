@@ -5,6 +5,8 @@
 
 set shell := ["bash", "-eu", "-o", "pipefail", "-c"]
 
+import 'docker.just'
+
 project_name      := "mockta"
 project_owner     := "donaldgifford"
 go_package        := "github.com/" + project_owner + "/" + project_name
@@ -31,16 +33,16 @@ build: build-core
 # Build the core CLI binary into build/bin/mockta
 [group('build')]
 build-core:
-    @mkdir -p {{ "{{" }} bin_dir {{ "}}" }}
-    @go build -ldflags "-X main.version={{ "{{" }} version {{ "}}" }} -X main.commit={{ "{{" }} commit_hash {{ "}}" }}" \
-        -o {{ "{{" }} bin_dir {{ "}}" }}/{{ "{{" }} project_name {{ "}}" }} ./cmd/{{ "{{" }} project_name {{ "}}" }}
+    @mkdir -p {{ bin_dir }}
+    @go build -ldflags "-X main.version={{ version }} -X main.commit={{ commit_hash }}" \
+        -o {{ bin_dir }}/{{ project_name }} ./cmd/{{ project_name }}
     @echo "✓ Core binaries built"
 
 # Remove build artifacts and the Go build cache
 [group('build')]
 clean:
-    @rm -rf {{ "{{" }} bin_dir {{ "}}" }}/
-    @rm -f {{ "{{" }} coverage_out {{ "}}" }}
+    @rm -rf {{ bin_dir }}/
+    @rm -f {{ coverage_out }}
     @go clean -cache
     @find . -name "*.test" -delete
     @echo "✓ Cleaned build artifacts"
@@ -50,12 +52,12 @@ clean:
 # Build then run the CLI
 [group('run')]
 run: build
-    @{{ "{{" }} bin_dir {{ "}}" }}/{{ "{{" }} project_name {{ "}}" }}
+    @{{ bin_dir }}/{{ project_name }}
 
 # Build then run the CLI from the local bin
 [group('run')]
 run-local: build
-    @{{ "{{" }} bin_dir {{ "}}" }}/{{ "{{" }} project_name {{ "}}" }}
+    @{{ bin_dir }}/{{ project_name }}
 
 # ─── Test ───────────────────────────────────────────────────────────
 
@@ -71,18 +73,18 @@ test-all: test
 # Run tests for a single package: just test-pkg ./pkg/foo
 [group('test')]
 test-pkg pkg:
-    @go test -v -race {{ "{{" }} pkg {{ "}}" }}
+    @go test -v -race {{ pkg }}
 
 # Run tests with a coverage profile written to coverage.out
 [group('test')]
 test-coverage:
-    @go test -v -race -coverprofile={{ "{{" }} coverage_out {{ "}}" }} ./...
+    @go test -v -race -coverprofile={{ coverage_out }} ./...
 
 # Run tests and open the HTML coverage report
 [group('test')]
 test-report:
-    @go test -coverprofile={{ "{{" }} coverage_out {{ "}}" }} ./...
-    @go tool cover -html={{ "{{" }} coverage_out {{ "}}" }}
+    @go test -coverprofile={{ coverage_out }} ./...
+    @go tool cover -html={{ coverage_out }}
 
 # ─── Lint & format ─────────────────────────────────────────────────
 
@@ -110,14 +112,62 @@ lint-actions:
 [group('lint')]
 fmt:
     @gofmt -s -w .
-    @goimports -w -local {{ "{{" }} goimports_local {{ "}}" }} .
+    @goimports -w -local {{ goimports_local }} .
+
+# ─── Contract + smoke tests ─────────────────────────────────────────
+
+# Run the contract test suite (tests/contract is a separate module).
+# Drives mockta in-process via httptest and asserts the wire shape
+# matches what the okta/okta provider expects.
+[group('test')]
+test-contract:
+    @cd tests/contract && go test ./... -race
+
+# Run the gap-list determinism golden test. Uses the
+# mockta_v0_undersized build tag which disables the groups handlers
+# so every group endpoint 501s with a deterministic gap ID. Compares
+# the observed sequence against tests/contract/testdata/gap-golden.txt.
+# Re-seed with `just test-gap-golden-update`.
+[group('test')]
+test-gap-golden:
+    @cd tests/contract && go test -tags mockta_v0_undersized -run TestGapGolden ./...
+
+[group('test')]
+test-gap-golden-update:
+    @cd tests/contract && go test -tags mockta_v0_undersized -run TestGapGolden -update ./...
+
+# Run the terraform-test smoke fixture. Requires the mockta image to
+# be loaded into the local Docker daemon (run `just docker-build`
+# first). The fixture spins up the sidecar via the docker provider
+# and exercises okta/okta against it.
+[group('test')]
+test-smoke:
+    @cd tests/smoke && terraform init -upgrade && terraform test
+
+# ─── Gap registry ───────────────────────────────────────────────────
+
+# Regenerate docs/gaps.md from the static registry. Run after editing
+# internal/gaps/gaps.go so the committed doc stays in sync.
+[group('lint')]
+gaps: build
+    @{{ bin_dir }}/{{ project_name }} gaps export --out docs/gaps.md
+    @echo "✓ docs/gaps.md regenerated"
+
+# Drift check: fails if `mockta gaps export` would change the committed
+# docs/gaps.md. Wired into CI to catch stale gap docs at PR time.
+[group('lint')]
+gaps-check: build
+    @{{ bin_dir }}/{{ project_name }} gaps export > /tmp/mockta-gaps-check.md
+    @diff -u docs/gaps.md /tmp/mockta-gaps-check.md \
+        || (echo "✗ docs/gaps.md is out of date — run 'just gaps' to refresh"; exit 1)
+    @echo "✓ docs/gaps.md is up to date"
 
 # ─── License compliance ─────────────────────────────────────────────
 
 # Check dependency licenses against the allow list
 [group('license')]
 license-check:
-    @go-licenses check ./... --allowed_licenses={{ "{{" }} allowed_licenses {{ "}}" }}
+    @go-licenses check ./... --allowed_licenses={{ allowed_licenses }}
 
 # Generate CSV report of all dependency licenses
 [group('license')]
@@ -139,8 +189,8 @@ release-local:
 # Tag and push a new release: just release v0.1.0
 [group('release')]
 release tag:
-    @git tag -a {{ "{{" }} tag {{ "}}" }} -m "Release {{ "{{" }} tag {{ "}}" }}"
-    @git push origin {{ "{{" }} tag {{ "}}" }}
+    @git tag -a {{ tag }} -m "Release {{ tag }}"
+    @git push origin {{ tag }}
 
 # ─── Composite gates ────────────────────────────────────────────────
 
@@ -149,7 +199,7 @@ release tag:
 check: lint test
     @echo "✓ Pre-commit checks passed"
 
-# Full CI gate: lint + test + build + license-check
+# Full CI gate: lint + test + build + license-check + gap drift check
 [group('gate')]
-ci: lint test build license-check
+ci: lint test build license-check gaps-check
     @echo "✓ CI pipeline complete"

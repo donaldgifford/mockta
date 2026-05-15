@@ -9,3 +9,11 @@
 # Re-include Go module files
 !go.mod
 !go.sum
+
+# Explicitly exclude test sub-modules and fixtures (IMPL-0001 Phase 6).
+# The allowlist above would otherwise re-include their .go files into
+# the build context — harmless for the build itself (cmd/mockta is the
+# only build target) but keeps the context lean.
+tests/
+dist/
+build/

@@ -15,19 +15,19 @@ this project adheres to [Semantic Versioning](https://semver.org/).
 """
 
 body = """
-{{ "{%" }} if version {{ "%}" }}\
-## [{{ "{{" }} version | trim_start_matches(pat="v") {{ "}}" }}] - {{ "{{" }} timestamp | date(format="%Y-%m-%d") {{ "}}" }}
-{{ "{%" }} else {{ "%}" }}\
+{% if version %}\
+## [{{ version | trim_start_matches(pat="v") }}] - {{ timestamp | date(format="%Y-%m-%d") }}
+{% else %}\
 ## [unreleased]
-{{ "{%" }} endif {{ "%}" }}\
-{{ "{%" }} for group, commits in commits | group_by(attribute="group") {{ "%}" }}
-### {{ "{{" }} group | striptags | trim | upper_first {{ "}}" }}
-{{ "{%" }} for commit in commits {{ "%}" }}
-- {{ "{%" }} if commit.scope {{ "%}" }}*({{ "{{" }} commit.scope {{ "}}" }})* {{ "{%" }} endif {{ "%}" }}\
-{{ "{%" }} if commit.breaking {{ "%}" }}[**breaking**] {{ "{%" }} endif {{ "%}" }}\
-{{ "{{" }} commit.message | upper_first {{ "}}" }}\
-{{ "{%" }} endfor {{ "%}" }}
-{{ "{%" }} endfor {{ "%}" }}\n
+{% endif %}\
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group | striptags | trim | upper_first }}
+{% for commit in commits %}
+- {% if commit.scope %}*({{ commit.scope }})* {% endif %}\
+{% if commit.breaking %}[**breaking**] {% endif %}\
+{{ commit.message | upper_first }}\
+{% endfor %}
+{% endfor %}\n
 """
 
 trim = true
@@ -67,6 +67,7 @@ commit_parsers = [
   { message = "^chore\\(deps.*\\)", skip = true },
   { message = "^chore\\(pr\\)", skip = true },
   { message = "^chore\\(pull\\)", skip = true },
+  { message = "^chore.*[Cc]hangelog", skip = true },
   { message = "^chore|^ci|^build", group = "<!-- 7 -->Miscellaneous Tasks" },
   { body = ".*security", group = "<!-- 8 -->Security" },
   { message = "^revert", group = "<!-- 9 -->Revert" },

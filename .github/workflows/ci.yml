@@ -48,16 +48,116 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Install just
+        uses: extractions/setup-just@v3
+
       - name: Run unit tests
-        run: make test-coverage
+        run: just test-coverage
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
           files: coverage.out
           token: ${{ secrets.CODECOV_TOKEN }}
-          slug: donaldgifford/
+          slug: donaldgifford/mockta
         continue-on-error: true
+
+  contract:
+    name: Contract tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Run contract suite
+        run: cd tests/contract && go test ./... -race
+
+      - name: Run gap-golden (undersized build tag)
+        run: cd tests/contract && go test -tags mockta_v0_undersized -run TestGapGolden ./...
+
+  smoke:
+    name: Smoke (terraform test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.14.0
+          terraform_wrapper: false
+
+      - name: Build mockta image into local daemon
+        uses: docker/bake-action@v6
+        with:
+          source: .
+          files: docker-bake.hcl
+          load: true
+
+      - name: Generate self-signed CA + server cert for smoke proxy
+        run: |
+          set -euo pipefail
+          sudo mkdir -p /tmp/mockta-smoke-certs
+          sudo chown "$(id -u):$(id -g)" /tmp/mockta-smoke-certs
+          cd /tmp/mockta-smoke-certs
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
+            -keyout ca.key -out ca.crt \
+            -subj "/CN=mockta-smoke-CA"
+          cat > server.ext <<'EOF'
+          subjectAltName = DNS:acme-smoke.localhost,DNS:*.localhost,DNS:localhost
+          EOF
+          openssl req -newkey rsa:2048 -nodes \
+            -keyout server.key -out server.csr \
+            -subj "/CN=acme-smoke.localhost"
+          openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key \
+            -CAcreateserial -out server.crt -days 1 -extfile server.ext
+          # Caddy in the container runs as root and reads /certs/*
+          # via bind mount; make the files world-readable so the
+          # mount target is usable.
+          chmod 0644 server.crt server.key
+
+      - name: Trust the smoke CA in the runner trust store
+        run: |
+          sudo cp /tmp/mockta-smoke-certs/ca.crt /usr/local/share/ca-certificates/mockta-smoke-ca.crt
+          sudo update-ca-certificates
+
+      - name: Run terraform test
+        run: |
+          cd tests/smoke/setup && terraform init -upgrade && cd -
+          cd tests/smoke/module && terraform init -upgrade && cd -
+          cd tests/smoke && terraform init -upgrade && terraform test
+
+  gaps-drift:
+    name: Gap registry drift check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Build mockta
+        run: go build -o /tmp/mockta ./cmd/mockta
+
+      - name: Regenerate gaps.md and diff
+        run: |
+          /tmp/mockta gaps export > /tmp/gaps.md
+          diff -u docs/gaps.md /tmp/gaps.md \
+            || (echo "docs/gaps.md out of date — run 'just gaps' locally"; exit 1)
 
   security:
     name: Security Scan

@@ -86,6 +86,10 @@ linters:
         - (*github.com/fatih/color.Color).Printf  # CLI color output to stdout.
         - (*github.com/fatih/color.Color).Println  # CLI color output to stdout.
         - (*github.com/spf13/cobra.Command).MarkFlagRequired  # Only fails if flag name is wrong.
+        - fmt.Fprintf  # CLI output where write errors are not actionable.
+        - fmt.Fprintln  # CLI output where write errors are not actionable.
+        - fmt.Fprint  # CLI output where write errors are not actionable.
+        - (net/http.ResponseWriter).Write  # Client may have disconnected; no response possible.
 
     errorlint:
       errorf: true
@@ -245,6 +249,14 @@ linters:
           - gosec
         text: "G104:"
         path: cmd/(compare|diff)\.go$
+
+      # G104 (errors unhandled) duplicates errcheck, which is
+      # configured more granularly and is the authoritative source
+      # for this class of finding. Disable gosec's variant to avoid
+      # double-reporting.
+      - linters:
+          - gosec
+        text: "G104:"
 
     paths:
       - vendor
