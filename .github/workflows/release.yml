@@ -24,7 +24,7 @@ jobs:
       tag: ${{ steps.bump.outputs.version }}
       skipped: ${{ steps.bump.outputs.skipped }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
 
@@ -48,7 +48,7 @@ jobs:
     needs: bump-version
     if: needs.bump-version.outputs.skipped != 'true'
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
           ref: ${{ needs.bump-version.outputs.tag }}
@@ -79,7 +79,7 @@ jobs:
     needs: [bump-version, release]
     if: needs.bump-version.outputs.skipped != 'true'
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ needs.bump-version.outputs.tag }}
 
