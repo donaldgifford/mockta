@@ -20,6 +20,17 @@ func (s *Store) CreateUser(u *User) error {
 		return fmt.Errorf("user with login %q: %w", u.Login, ErrConflict)
 	}
 
+	// The ID is derived from the login at create time and survives a
+	// later login change, so a fresh create with the original login
+	// would otherwise silently replace the renamed row.
+	byID, err := txn.First(TableUsers, IndexID, u.ID)
+	if err != nil {
+		return fmt.Errorf("lookup user by id: %w", err)
+	}
+	if byID != nil {
+		return fmt.Errorf("user id %q: %w", u.ID, ErrConflict)
+	}
+
 	if err := txn.Insert(TableUsers, u); err != nil {
 		return fmt.Errorf("insert user: %w", err)
 	}

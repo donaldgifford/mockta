@@ -2,7 +2,8 @@ package store
 
 import "fmt"
 
-// CreateGroup inserts g. Returns ErrConflict if Name is already taken.
+// CreateGroup inserts g. Returns ErrConflict if Name is already taken
+// or if ID collides with an existing row.
 func (s *Store) CreateGroup(g *Group) error {
 	txn := s.writeTxn()
 	defer txn.Abort()
@@ -13,6 +14,16 @@ func (s *Store) CreateGroup(g *Group) error {
 	}
 	if existing != nil {
 		return fmt.Errorf("group with name %q: %w", g.Name, ErrConflict)
+	}
+
+	// Same guard as CreateUser: the ID is name-derived and survives a
+	// rename, so re-creating the original name must not clobber it.
+	byID, err := txn.First(TableGroups, IndexID, g.ID)
+	if err != nil {
+		return fmt.Errorf("lookup group by id: %w", err)
+	}
+	if byID != nil {
+		return fmt.Errorf("group id %q: %w", g.ID, ErrConflict)
 	}
 
 	if err := txn.Insert(TableGroups, g); err != nil {

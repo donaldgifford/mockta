@@ -1,4 +1,13 @@
-# mockta
+# mockta (original vision notes)
+
+> **Status: historical.** This is the pre-RFC sketch that became
+> [RFC-0001](rfc/0001-mockta-lightweight-okta-mock-for-terraform-and-go-service-tests.md)
+> and [DESIGN-0001](design/0001-terraform-test-compliant-mockta-v0.md).
+> The repo layout, library API, testcontainers module, OIDC/SAML/SCIM
+> components, and seed files described below are **not** what v0
+> shipped — v0 is the Management-API subset in DESIGN-0001, consumed
+> as the `ghcr.io/donaldgifford/mockta:0.1.0` container. Kept for the
+> Tier 1+ ideas; do not treat it as a description of current behavior.
 
 A lightweight, embeddable Okta mock for Terraform acceptance tests and Go
 service tests. Real OIDC/SAML protocols, no separate IdP process, no JVM.
@@ -84,7 +93,7 @@ default**, even for pure-Okta cases, because:
 ### What ships in v0
 
 - mockta core sufficient for `terraform apply` of `okta_user`, `okta_group`,
-  `okta_app_saml`, `okta_group_membership` against the `oktadeveloper/okta`
+  `okta_app_saml`, `okta_group_membership` against the `okta/okta`
   provider (plan, apply, refresh, destroy all round-trip).
 - Distroless container image at `ghcr.io/donaldgifford/mockta` so
   `terraform test` `run` blocks can spin it up like LocalStack.
@@ -216,7 +225,7 @@ import "github.com/donaldgifford/mockta/modules/mockta"
 
 func TestSomething(t *testing.T) {
     ctx := context.Background()
-    mk, err := mockta.Run(ctx, "ghcr.io/donaldgifford/mockta:v0.1.0",
+    mk, err := mockta.Run(ctx, "ghcr.io/donaldgifford/mockta:0.1.0",
         mockta.WithSeedFile("./testdata/seed.yaml"),
     )
     testcontainers.CleanupContainer(t, mk)
@@ -501,5 +510,6 @@ Just so it's written down:
 
 ## Status
 
-Pre-design. This doc is the starting point — promote to a docz RFC once the open
-questions resolve.
+Superseded. Promoted to RFC-0001 (Accepted) and DESIGN-0001
+(Implemented, shipped as v0.1.0 on 2026-05-16). Open questions above
+that still matter are tracked in those docs, not here.

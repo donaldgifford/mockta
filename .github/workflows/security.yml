@@ -22,7 +22,7 @@ jobs:
           output-format: sarif
           output-file: govulncheck.sarif
 
-      # ... such as the Code Scanning tab (https://github.com/oapi-codegen/oapi-codegen/security/code-scanning?query=is%3Aopen+branch%3Amain+tool%3Agovulncheck)
+      # ... such as this repo's Code Scanning tab (Security → Code scanning, tool: govulncheck)
       - name: Upload SARIF file
         uses: github/codeql-action/upload-sarif@v4
         with:

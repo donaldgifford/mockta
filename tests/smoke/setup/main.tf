@@ -29,7 +29,7 @@ variable "org_name" {
 variable "tls_cert_dir" {
   type        = string
   default     = "/tmp/mockta-smoke-certs"
-  description = "Host directory containing server.crt + server.key (PEM) whose SAN covers acme-smoke.localhost. CI populates it before terraform test; locally, `just test-smoke` does the same."
+  description = "Host directory containing server.crt + server.key (PEM) whose SAN covers acme-smoke.localhost. CI populates it before terraform test; locally, `just test-smoke` generates it."
 }
 
 variable "caddy_image" {
@@ -45,6 +45,11 @@ resource "docker_network" "smoke" {
 resource "docker_container" "mockta" {
   image = var.mockta_image
   name  = "mockta-smoke-${terraform.workspace}"
+
+  # Block the apply until the in-binary healthcheck reports healthy so
+  # the module run never races the listener coming up.
+  wait         = true
+  wait_timeout = 60
 
   env = [
     "MOCKTA_ADMIN_TOKEN=${var.admin_token}",
@@ -74,13 +79,16 @@ resource "docker_image" "caddy" {
 # defaults the port to 443; it will not speak plain HTTP. So we
 # put a TLS terminator on host :443 that reverse-proxies to
 # mockta:8080 on the docker network. The cert/key are generated
-# out-of-band in CI (or by `just docker-smoke-tls`) and bind-mounted
+# out-of-band in CI (or by `just test-smoke`) and bind-mounted
 # in.
 resource "docker_container" "caddy" {
   image = docker_image.caddy.image_id
   name  = "caddy-smoke-${terraform.workspace}"
 
   depends_on = [docker_container.mockta]
+
+  wait         = true
+  wait_timeout = 60
 
   networks_advanced {
     name = docker_network.smoke.name
@@ -114,8 +122,15 @@ resource "docker_container" "caddy" {
 
   command = ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
 
+  # Probe through the TLS proxy to an authenticated API path. /health
+  # only exists on mockta:9090, not behind the proxy, so a bare
+  # https://localhost/health would 401 forever.
   healthcheck {
-    test         = ["CMD", "wget", "-q", "--no-check-certificate", "-O", "-", "https://localhost/health"]
+    test = [
+      "CMD", "wget", "-q", "--no-check-certificate",
+      "--header", "Authorization: Bearer ${var.admin_token}",
+      "-O", "-", "https://localhost/api/v1/org",
+    ]
     interval     = "1s"
     retries      = 30
     start_period = "1s"

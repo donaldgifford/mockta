@@ -503,3 +503,101 @@ func TestStore_Reset(t *testing.T) {
 		t.Errorf("after Reset, first AppendAudit ID = %d, want 1", next.ID)
 	}
 }
+
+// Regression: IDs are derived from the login/name at create time and
+// survive a rename. Re-creating the original login/name must 409, not
+// silently replace the renamed row via memdb's upsert-on-id.
+func TestStore_CreateUser_IDCollisionAfterRename(t *testing.T) {
+	t.Parallel()
+	s := newTestStore(t)
+
+	alice := &User{
+		ID:     NewID(KindUser, "alice@example.com"),
+		Login:  "alice@example.com",
+		Email:  "alice@example.com",
+		Status: "ACTIVE",
+	}
+	if err := s.CreateUser(alice); err != nil {
+		t.Fatalf("CreateUser(alice) = %v", err)
+	}
+
+	renamed := *alice
+	renamed.Login = "alice.renamed@example.com"
+	renamed.Email = renamed.Login
+	if err := s.UpdateUser(&renamed); err != nil {
+		t.Fatalf("UpdateUser(rename) = %v", err)
+	}
+
+	again := &User{
+		ID:     NewID(KindUser, "alice@example.com"),
+		Login:  "alice@example.com",
+		Email:  "alice@example.com",
+		Status: "ACTIVE",
+	}
+	if err := s.CreateUser(again); !errors.Is(err, ErrConflict) {
+		t.Fatalf("CreateUser(original login after rename) = %v, want ErrConflict", err)
+	}
+
+	got, err := s.GetUser(alice.ID)
+	if err != nil {
+		t.Fatalf("GetUser = %v", err)
+	}
+	if got.Login != renamed.Login {
+		t.Errorf("renamed row was clobbered: Login = %q, want %q", got.Login, renamed.Login)
+	}
+}
+
+func TestStore_CreateGroup_IDCollisionAfterRename(t *testing.T) {
+	t.Parallel()
+	s := newTestStore(t)
+
+	eng := &Group{ID: NewID(KindGroup, "engineers"), Name: "engineers", Type: "OKTA_GROUP"}
+	if err := s.CreateGroup(eng); err != nil {
+		t.Fatalf("CreateGroup(eng) = %v", err)
+	}
+
+	renamed := *eng
+	renamed.Name = "platform"
+	if err := s.UpdateGroup(&renamed); err != nil {
+		t.Fatalf("UpdateGroup(rename) = %v", err)
+	}
+
+	again := &Group{ID: NewID(KindGroup, "engineers"), Name: "engineers", Type: "OKTA_GROUP"}
+	if err := s.CreateGroup(again); !errors.Is(err, ErrConflict) {
+		t.Fatalf("CreateGroup(original name after rename) = %v, want ErrConflict", err)
+	}
+
+	got, err := s.GetGroup(eng.ID)
+	if err != nil {
+		t.Fatalf("GetGroup = %v", err)
+	}
+	if got.Name != "platform" {
+		t.Errorf("renamed row was clobbered: Name = %q, want platform", got.Name)
+	}
+}
+
+// Regression: Get*/List* must hand back copies so callers mutating the
+// result (lifecycle flips) never touch the object memdb holds.
+func TestStore_GetUser_ReturnsCopy(t *testing.T) {
+	t.Parallel()
+	s := newTestStore(t)
+
+	u := &User{ID: NewID(KindUser, "copy@example.com"), Login: "copy@example.com", Email: "copy@example.com", Status: "ACTIVE"}
+	if err := s.CreateUser(u); err != nil {
+		t.Fatalf("CreateUser = %v", err)
+	}
+
+	first, err := s.GetUser(u.ID)
+	if err != nil {
+		t.Fatalf("GetUser = %v", err)
+	}
+	first.Status = "DEPROVISIONED"
+
+	second, err := s.GetUser(u.ID)
+	if err != nil {
+		t.Fatalf("GetUser = %v", err)
+	}
+	if second.Status != "ACTIVE" {
+		t.Errorf("mutation leaked into the store: Status = %q, want ACTIVE", second.Status)
+	}
+}

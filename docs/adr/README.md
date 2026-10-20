@@ -29,6 +29,9 @@ docz create adr "Your ADR Title"
 <!-- BEGIN DOCZ AUTO-GENERATED -->
 ## All ADRs
 
+<!-- markdownlint-capture -->
+<!-- markdownlint-disable MD013 -->
 | ID | Title | Status | Date | Author | Link |
-|----|-------|--------|------|--------|------|
+| --- | --- | --- | --- | --- | --- |
+<!-- markdownlint-restore -->
 <!-- END DOCZ AUTO-GENERATED -->

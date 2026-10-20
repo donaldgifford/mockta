@@ -28,10 +28,13 @@ docz create design "Your Design Title"
 - **Abandoned**: Design was not pursued
 
 <!-- BEGIN DOCZ AUTO-GENERATED -->
-## All DESIGNs
+## All Design
 
+<!-- markdownlint-capture -->
+<!-- markdownlint-disable MD013 -->
 | ID | Title | Status | Date | Author | Link |
-|----|-------|--------|------|--------|------|
-| DESIGN-0001 | terraform-test compliant mockta v0 | Draft | 2026-05-15 | Donald Gifford | [0001-terraform-test-compliant-mockta-v0.md](0001-terraform-test-compliant-mockta-v0.md) |
+| --- | --- | --- | --- | --- | --- |
+| DESIGN-0001 | terraform-test compliant mockta v0 | Implemented | 2026-05-15 | Donald Gifford | [0001-terraform-test-compliant-mockta-v0.md](0001-terraform-test-compliant-mockta-v0.md) |
 | DESIGN-0002 | libtftest mockta parity adapter | Draft | 2026-05-15 | Donald Gifford | [0002-libtftest-mockta-parity-adapter.md](0002-libtftest-mockta-parity-adapter.md) |
+<!-- markdownlint-restore -->
 <!-- END DOCZ AUTO-GENERATED -->
