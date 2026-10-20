@@ -28,9 +28,12 @@ docz create impl "Your Implementation Title"
 - **Cancelled**: Plan was abandoned
 
 <!-- BEGIN DOCZ AUTO-GENERATED -->
-## All IMPLs
+## All Implementation Plans
 
+<!-- markdownlint-capture -->
+<!-- markdownlint-disable MD013 -->
 | ID | Title | Status | Date | Author | Link |
-|----|-------|--------|------|--------|------|
-| IMPL-0001 | terraform-test compliant mockta v0 | Draft | 2026-05-15 | Donald Gifford | [0001-terraform-test-compliant-mockta-v0.md](0001-terraform-test-compliant-mockta-v0.md) |
+| --- | --- | --- | --- | --- | --- |
+| IMPL-0001 | terraform-test compliant mockta v0 | Completed | 2026-05-15 | Donald Gifford | [0001-terraform-test-compliant-mockta-v0.md](0001-terraform-test-compliant-mockta-v0.md) |
+<!-- markdownlint-restore -->
 <!-- END DOCZ AUTO-GENERATED -->

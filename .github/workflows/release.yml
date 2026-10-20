@@ -78,10 +78,19 @@ jobs:
     runs-on: ubuntu-latest
     needs: [bump-version, release]
     if: needs.bump-version.outputs.skipped != 'true'
+    env:
+      # Consumed by docker-bake.hcl so the image reports the same
+      # version/commit as the GoReleaser binaries instead of 0.0.0-dev.
+      COMMIT: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v6
         with:
           ref: ${{ needs.bump-version.outputs.tag }}
+
+      - name: Derive bake VERSION from tag (strip leading v)
+        env:
+          TAG: ${{ needs.bump-version.outputs.tag }}
+        run: echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3

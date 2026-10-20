@@ -13,10 +13,10 @@ import (
 	"github.com/donaldgifford/mockta/pkg/mockta"
 )
 
-// newServeCmd builds the `mockta serve` subcommand, which is the default
-// runtime entrypoint. Phase 1 keeps Server.Start as a no-op so this
-// command currently starts and returns immediately; Phase 3 fills in the
-// HTTP listeners.
+// newServeCmd builds the `mockta serve` subcommand, the runtime
+// entrypoint. It blocks until SIGINT/SIGTERM, then drains both
+// listeners via Server.Start's graceful-shutdown path. The container
+// image sets `CMD ["serve"]` so a bare `docker run` lands here.
 func newServeCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "serve",

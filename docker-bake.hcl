@@ -21,6 +21,10 @@ variable "VERSION" {
   default = "0.0.0-dev"
 }
 
+variable "COMMIT" {
+  default = "unknown"
+}
+
 group "default" {
   targets = ["mockta"]
 }
@@ -38,6 +42,7 @@ target "_common" {
   dockerfile = "Dockerfile"
   args = {
     VERSION = "${VERSION}"
+    COMMIT  = "${COMMIT}"
   }
   labels = {
     "org.opencontainers.image.source"      = "https://github.com/donaldgifford/mockta"

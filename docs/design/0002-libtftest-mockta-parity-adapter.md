@@ -14,6 +14,8 @@ created: 2026-05-15
 **Date:** 2026-05-15
 
 <!--toc:start-->
+<!-- markdownlint-capture -->
+<!-- markdownlint-disable MD013 -->
 - [Overview](#overview)
 - [Goals and Non-Goals](#goals-and-non-goals)
   - [Goals](#goals)
@@ -32,6 +34,7 @@ created: 2026-05-15
 - [Migration / Rollout Plan](#migration--rollout-plan)
 - [Open Questions](#open-questions)
 - [References](#references)
+<!-- markdownlint-restore -->
 <!--toc:end-->
 
 ## Overview
@@ -66,7 +69,7 @@ real responsibilities.
 - **No composite `iamenv` work in v0.** Composite environments
   (mockta + sneakystack on a shared Docker network) are Tier 3; this
   design notes the future shape but doesn't ship it now.
-- **No fork of `oktadeveloper/okta`.** The adapter configures the
+- **No fork of `okta/okta`.** The adapter configures the
   provider via standard env vars; no custom build.
 
 ## Background
@@ -148,7 +151,7 @@ anyone who already knows libtftest.
 
 ### Env contract
 
-`ProviderEnv()` returns the exact env keys the `oktadeveloper/okta`
+`ProviderEnv()` returns the exact env keys the `okta/okta`
 provider reads, in the form a `terraform test` `variables` block or a
 Go `os.Setenv` call can consume:
 
@@ -181,7 +184,7 @@ NewContainer(t)
     │
     ├─► pull image (testcontainers handles cache)
     ├─► docker run with MOCKTA_ADMIN_TOKEN, MOCKTA_ORG_NAME set
-    ├─► wait for GET /health → 200
+    ├─► wait for GET :9090/health → 200 (admin port, not the API port)
     ├─► resolve mapped ports → populate Env.BaseURL
     └─► return *Env
 
@@ -189,8 +192,11 @@ NewContainer(t)
                                       pruned where applicable)
 ```
 
-Wait strategy: `wait.ForHTTP("/health").WithPort("8080/tcp").WithStatusCodeMatcher(...)` —
-identical to LocalStack's. Default timeout 60s.
+Wait strategy: `wait.ForHTTP("/health").WithPort("9090/tcp").WithStatusCodeMatcher(...)` —
+same shape as LocalStack's. **Port 9090, not 8080:** mockta serves
+`/health` only on the admin listener; on 8080 it is an unrouted path
+that 501s (or 401s with auth on). Expose both ports and resolve
+`Env.BaseURL` from the 8080 mapping. Default timeout 60s.
 
 Concurrency: each `NewContainer` call gets its own container. No
 sharing across tests in v0. `testcontainers.WithReuse()` is plumbed
@@ -261,8 +267,11 @@ errors flowing back from mockta and surfaces gap IDs into `t.Log`:
 // MOCKTA_GAP_* code during the test. Call as t.Cleanup(env.AssertNoGaps).
 func (e *Env) AssertNoGaps(t *testing.T)
 
-// GapsHit returns the list of gap IDs hit during this Env's lifetime,
-// queried from mockta's /admin/audit endpoint.
+// GapsHit returns the list of gap IDs hit during this Env's lifetime.
+// mockta v0 has no /admin/audit endpoint (the audit log is in-process
+// only), so v0 of the adapter collects IDs from the X-Mockta-Gap
+// response header via a LogConsumer / HTTP transport hook; a read
+// endpoint is a mockta follow-up (see Open Questions).
 func (e *Env) GapsHit() []string
 ```
 

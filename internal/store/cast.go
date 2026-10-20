@@ -8,13 +8,21 @@ import "fmt"
 // the in-memory schema and the Go type wired into Insert() disagree,
 // which is a programmer error. We return an error rather than panic
 // so the surrounding handler can convert to a 500 response.
+//
+// Each helper returns a shallow copy rather than the pointer go-memdb
+// holds. Handlers mutate the result (lifecycle flips, UpdatedAt) before
+// calling Update*, and mutating the stored object in place would race
+// with concurrent readers and break memdb's snapshot isolation. The
+// raw-JSON blobs are shared, which is fine because nothing writes into
+// them in place.
 
 func asUser(raw any) (*User, error) {
 	v, ok := raw.(*User)
 	if !ok {
 		return nil, fmt.Errorf("internal: stored value is not *User: %T", raw)
 	}
-	return v, nil
+	c := *v
+	return &c, nil
 }
 
 func asGroup(raw any) (*Group, error) {
@@ -22,7 +30,8 @@ func asGroup(raw any) (*Group, error) {
 	if !ok {
 		return nil, fmt.Errorf("internal: stored value is not *Group: %T", raw)
 	}
-	return v, nil
+	c := *v
+	return &c, nil
 }
 
 func asApp(raw any) (*App, error) {
@@ -30,7 +39,8 @@ func asApp(raw any) (*App, error) {
 	if !ok {
 		return nil, fmt.Errorf("internal: stored value is not *App: %T", raw)
 	}
-	return v, nil
+	c := *v
+	return &c, nil
 }
 
 func asGroupMembership(raw any) (*GroupMembership, error) {
@@ -38,7 +48,8 @@ func asGroupMembership(raw any) (*GroupMembership, error) {
 	if !ok {
 		return nil, fmt.Errorf("internal: stored value is not *GroupMembership: %T", raw)
 	}
-	return v, nil
+	c := *v
+	return &c, nil
 }
 
 func asAuditEntry(raw any) (*AuditEntry, error) {
@@ -46,5 +57,6 @@ func asAuditEntry(raw any) (*AuditEntry, error) {
 	if !ok {
 		return nil, fmt.Errorf("internal: stored value is not *AuditEntry: %T", raw)
 	}
-	return v, nil
+	c := *v
+	return &c, nil
 }

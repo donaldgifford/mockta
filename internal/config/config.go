@@ -34,11 +34,11 @@ const (
 // pkg/mockta.New and used by handlers via the Server.
 type Config struct {
 	// AdminToken is the bearer token clients must present. An empty value
-	// means "generate one at startup" (Phase 3 wires the generation up);
-	// loading config does not enforce non-empty.
+	// disables auth entirely (see middleware.Auth) -- handy for scripts
+	// and curl, never for the libtftest adapter, which always sets one.
 	AdminToken string
 
-	// OrgName is surfaced via /api/v1/org and embedded in generated IDs.
+	// OrgName is surfaced via /api/v1/org (and seeds the org ID).
 	OrgName string
 
 	// StrictMode toggles Okta-documented validation. False is "accept

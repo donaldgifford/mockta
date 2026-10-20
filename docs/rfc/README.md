@@ -31,7 +31,10 @@ docz create rfc "Your RFC Title"
 <!-- BEGIN DOCZ AUTO-GENERATED -->
 ## All RFCs
 
+<!-- markdownlint-capture -->
+<!-- markdownlint-disable MD013 -->
 | ID | Title | Status | Date | Author | Link |
-|----|-------|--------|------|--------|------|
-| RFC-0001 | mockta: lightweight Okta mock for Terraform and Go service tests | Draft | 2026-05-15 | Donald Gifford | [0001-mockta-lightweight-okta-mock-for-terraform-and-go-service-tests.md](0001-mockta-lightweight-okta-mock-for-terraform-and-go-service-tests.md) |
+| --- | --- | --- | --- | --- | --- |
+| RFC-0001 | mockta: lightweight Okta mock for Terraform and Go service tests | Accepted | 2026-05-15 | Donald Gifford | [0001-mockta-lightweight-okta-mock-for-terraform-and-go-service-tests.md](0001-mockta-lightweight-okta-mock-for-terraform-and-go-service-tests.md) |
+<!-- markdownlint-restore -->
 <!-- END DOCZ AUTO-GENERATED -->

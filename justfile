@@ -1,7 +1,7 @@
 # mockta — task runner
 #
-# Project automation via just. Use either the Makefile or this justfile —
-# both expose the same target set with equivalent behavior.
+# Project automation via just. Run `just` with no arguments to list
+# recipes; docker recipes live in docker.just.
 
 set shell := ["bash", "-eu", "-o", "pipefail", "-c"]
 
@@ -26,7 +26,7 @@ _default:
 
 # ─── Build ──────────────────────────────────────────────────────────
 
-# Build everything (core)
+# Build the CLI binary (alias for build-core)
 [group('build')]
 build: build-core
 
@@ -49,15 +49,10 @@ clean:
 
 # ─── Run ────────────────────────────────────────────────────────────
 
-# Build then run the CLI
+# Build then start the server (:8080 API, :9090 admin/health)
 [group('run')]
 run: build
-    @{{ bin_dir }}/{{ project_name }}
-
-# Build then run the CLI from the local bin
-[group('run')]
-run-local: build
-    @{{ bin_dir }}/{{ project_name }}
+    @{{ bin_dir }}/{{ project_name }} serve
 
 # ─── Test ───────────────────────────────────────────────────────────
 
@@ -66,9 +61,9 @@ run-local: build
 test:
     @go test -v -race ./...
 
-# Run all tests (core + plugins)
+# Run every Go suite: unit + contract + gap-golden
 [group('test')]
-test-all: test
+test-all: test test-contract test-gap-golden
 
 # Run tests for a single package: just test-pkg ./pkg/foo
 [group('test')]
@@ -132,29 +127,51 @@ test-contract:
 test-gap-golden:
     @cd tests/contract && go test -tags mockta_v0_undersized -run TestGapGolden ./...
 
+# Re-seed tests/contract/testdata/gap-golden.txt from a fresh run
 [group('test')]
 test-gap-golden-update:
     @cd tests/contract && go test -tags mockta_v0_undersized -run TestGapGolden -update ./...
 
 # Run the terraform-test smoke fixture. Requires the mockta image to
 # be loaded into the local Docker daemon (run `just docker-build`
-# first). The fixture spins up the sidecar via the docker provider
-# and exercises okta/okta against it.
+# first). Generates the self-signed cert the Caddy TLS proxy needs,
+# inits the setup/module subdirectories, then runs `terraform test`.
+# Mirrors the `smoke` job in ci.yml.
 [group('test')]
-test-smoke:
-    @cd tests/smoke && terraform init -upgrade && terraform test
+test-smoke: smoke-certs
+    @cd tests/smoke/setup && terraform init -upgrade >/dev/null
+    @cd tests/smoke/module && terraform init -upgrade >/dev/null
+    @cd tests/smoke && terraform init -upgrade >/dev/null && terraform test
+
+# Generate the self-signed CA + server cert the smoke proxy mounts
+# from /tmp/mockta-smoke-certs (SAN covers acme-smoke.localhost).
+[group('test')]
+smoke-certs:
+    @mkdir -p /tmp/mockta-smoke-certs
+    @cd /tmp/mockta-smoke-certs && \
+        openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
+            -keyout ca.key -out ca.crt -subj "/CN=mockta-smoke-CA" 2>/dev/null && \
+        printf 'subjectAltName = DNS:acme-smoke.localhost,DNS:*.localhost,DNS:localhost\n' > server.ext && \
+        openssl req -newkey rsa:2048 -nodes -keyout server.key -out server.csr \
+            -subj "/CN=acme-smoke.localhost" 2>/dev/null && \
+        openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial \
+            -out server.crt -days 1 -extfile server.ext 2>/dev/null && \
+        chmod 0644 server.crt server.key
+    @echo "✓ smoke certs in /tmp/mockta-smoke-certs (trust ca.crt locally if the provider rejects the chain)"
 
 # ─── Gap registry ───────────────────────────────────────────────────
 
-# Regenerate docs/gaps.md from the static registry. Run after editing
-# internal/gaps/gaps.go so the committed doc stays in sync.
+# Run after editing internal/gaps/gaps.go so the committed doc stays in sync.
+#
+# Regenerate docs/gaps.md from the static registry
 [group('lint')]
 gaps: build
     @{{ bin_dir }}/{{ project_name }} gaps export --out docs/gaps.md
     @echo "✓ docs/gaps.md regenerated"
 
-# Drift check: fails if `mockta gaps export` would change the committed
-# docs/gaps.md. Wired into CI to catch stale gap docs at PR time.
+# Wired into CI to catch stale gap docs at PR time.
+#
+# Drift check: fail if `mockta gaps export` would change docs/gaps.md
 [group('lint')]
 gaps-check: build
     @{{ bin_dir }}/{{ project_name }} gaps export > /tmp/mockta-gaps-check.md
@@ -199,7 +216,7 @@ release tag:
 check: lint test
     @echo "✓ Pre-commit checks passed"
 
-# Full CI gate: lint + test + build + license-check + gap drift check
+# Full CI gate: lint + all test suites + build + license-check + gap drift check
 [group('gate')]
-ci: lint test build license-check gaps-check
+ci: lint test-all build license-check gaps-check
     @echo "✓ CI pipeline complete"

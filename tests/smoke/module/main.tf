@@ -1,9 +1,9 @@
 # Trivial module-under-test for the mockta smoke fixture.
 #
-# Creates one of each v0 resource type (user, group, app, membership)
-# and outputs the IDs. The smoke.tftest.hcl asserts non-empty IDs to
-# confirm the okta/okta provider can plan + apply against mockta
-# without erroring.
+# Creates a user, a group, and the membership between them and
+# outputs the IDs (okta_app_saml is deliberately absent; see below).
+# The smoke.tftest.hcl asserts non-empty IDs to confirm the okta/okta
+# provider can plan + apply against mockta without erroring.
 
 terraform {
   required_version = ">= 1.7.0"
@@ -62,7 +62,7 @@ resource "okta_group_memberships" "alice_in_engineers" {
 # The okta/okta provider's SAML-app create flow calls
 # GET /api/v1/policies to look up the default ACCESS_POLICY before
 # any app-mockta call lands. /api/v1/policies is out of scope for
-# mockta v0 (tracked as MOCKTA_GAP_0030 in the registry) so the
+# mockta v0 (tracked as MOCKTA_GAP_0010 in the registry) so the
 # provider's resource ends up calling a 501'd endpoint and never
 # reaches mockta's /api/v1/apps handler. A follow-up that lands a
 # stub policies endpoint will let this resource live in the fixture.

@@ -7,15 +7,18 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+
+	"github.com/donaldgifford/mockta/pkg/mockta"
 )
 
 // healthcheckURL is the local probe endpoint. Declared as a var (not
 // const) so tests can override it; production callers don't mutate
-// it. The default is hardcoded because this command's whole purpose
-// is to be invoked by Docker's HEALTHCHECK instruction (and
-// terraform's docker_container.healthcheck block), both of which
-// always run inside the container against localhost.
-var healthcheckURL = "http://localhost:9090/health"
+// it. localhost is assumed because this command's whole purpose is
+// to be invoked by Docker's HEALTHCHECK instruction (and terraform's
+// docker_container.healthcheck block), both of which run inside the
+// container. The port comes from the server package so the two can't
+// drift.
+var healthcheckURL = "http://localhost" + mockta.AdminAddr + "/health"
 
 // healthcheckTimeout caps the probe at a duration short enough not to block
 // Docker's healthcheck interval, but long enough to absorb a slow startup.

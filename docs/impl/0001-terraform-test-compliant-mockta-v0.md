@@ -1,7 +1,7 @@
 ---
 id: IMPL-0001
 title: "terraform-test compliant mockta v0"
-status: Draft
+status: Completed
 author: Donald Gifford
 created: 2026-05-15
 ---
@@ -9,11 +9,13 @@ created: 2026-05-15
 
 # IMPL 0001: terraform-test compliant mockta v0
 
-**Status:** Draft
+**Status:** Completed
 **Author:** Donald Gifford
 **Date:** 2026-05-15
 
 <!--toc:start-->
+<!-- markdownlint-capture -->
+<!-- markdownlint-disable MD013 -->
 - [Objective](#objective)
 - [Scope](#scope)
   - [In Scope](#in-scope)
@@ -47,14 +49,16 @@ created: 2026-05-15
 - [Testing Plan](#testing-plan)
 - [Dependencies](#dependencies)
 - [Open Questions](#open-questions)
+  - [Resolved during review](#resolved-during-review)
 - [References](#references)
+<!-- markdownlint-restore -->
 <!--toc:end-->
 
 ## Objective
 
 Implement [DESIGN-0001](../design/0001-terraform-test-compliant-mockta-v0.md) —
 the Tier 0 deliverable of mockta. The end state is a single Go binary +
-container image at `ghcr.io/donaldgifford/mockta:v0.1.0` that speaks
+container image at `ghcr.io/donaldgifford/mockta:0.1.0` that speaks
 enough of the Okta Management API for `terraform apply` /
 `refresh` / `destroy` to round-trip the v0 resource set under
 `terraform test`, with a published gap list for everything else.
@@ -446,10 +450,10 @@ infrastructure — just exercising what's already there.
 ### Phase 7: Contract + smoke tests
 
 Two test suites that together prove "the provider works against
-mockta": (a) the Go contract suite that invokes the
-`oktadeveloper/okta` provider in-process for fast, focused round-trip
-assertions, and (b) the `terraform test` smoke fixture that exercises
-the container-shape end-to-end.
+mockta": (a) the Go contract suite that boots mockta in-process and
+asserts wire shape over plain HTTP (no provider or SDK dependency),
+and (b) the `terraform test` smoke fixture that drives the real
+`okta/okta` provider against the built container end-to-end.
 
 #### Tasks
 
@@ -537,11 +541,12 @@ work end-to-end.
       binaries (linux/darwin × amd64/arm64), each ~3 MB, plus
       checksums and signed artifacts. `mockta version` from the
       snapshot binary reports `v0.0.0-dev` per the snapshot template.
-- [x] Update `CHANGELOG.md` via `git-cliff` covering Phases 1–7
-      plus a handwritten Highlights paragraph. Fixed `cliff.toml`
-      where the Tera template body had been over-escaped through
-      a code-gen tool — the rendered output now matches what
-      `git-cliff --tag v0.1.0` produces.
+- [x] Update `CHANGELOG.md` via `git-cliff`. The single squash-merged
+      PR collapses Phases 1–7 into one Features entry; the planned
+      handwritten Highlights paragraph was dropped because the
+      `changelog-regen` workflow overwrites the file on every merge.
+      Fixed `cliff.toml` where the Tera template body had been
+      over-escaped through a code-gen tool.
 - [x] Audit `.github/workflows/release.yml`: triggers on push to
       main via `pr-semver-bump` (PR-label-driven tagging), wires
       GoReleaser + GHCR push via bake. Fixed a missing project
@@ -553,23 +558,34 @@ work end-to-end.
       step in `docker-bake.hcl`" that did not actually exist). The
       Phase 8 success criterion `cosign verify` now has the signing
       side wired up.
-- [ ] **Operator action required:** `just release v0.1.0` — tag +
-      push to trigger the workflow.
-- [ ] **Operator action required:** Verify
-      `ghcr.io/donaldgifford/mockta:v0.1.0` and `:latest` exist post-push.
-- [ ] **Operator action required:** Trigger / verify the wiki
-      publish picks up the new `docs/gaps.md` for the release.
-- [ ] **Operator action required:** Smoke-pull the published image
-      on a clean machine and run the smoke fixture against it.
+- [x] Tag + release. `v0.1.0` was cut on 2026-05-16 by the
+      `pr-semver-bump`-driven release workflow (not `just release`);
+      the GitHub release carries linux/darwin × amd64/arm64 archives,
+      checksums, and GPG signatures.
+- [x] Verify the GHCR image. `docker/metadata-action` strips the `v`,
+      so the published tags are `0.1.0`, `0.1`, and `latest` (plus
+      `dev-ci` from PR builds) — there is no `:v0.1.0`. Both
+      `linux/amd64` and `linux/arm64` manifests are present and the
+      image is cosign-signed (keyless OIDC). *Known defect fixed
+      post-release:* the release workflow never passed `VERSION` /
+      `COMMIT` into bake, so the 0.1.0 image reports
+      `0.0.0-dev (commit unknown)`; the next release picks up the fix.
+- [x] Smoke-pull the published image. Verified 2026-10-20: `0.1.0`
+      pulls on a clean daemon, `/health` on :9090 returns 200.
+- [ ] **Operator action required:** Verify the wiki publish picks up
+      `docs/gaps.md` for the release (needs the TechDocs / MkDocs
+      deploy, which this repo does not drive).
 - [ ] **Follow-up work:** Open the DESIGN-0002 (libtftest adapter)
-      implementation work with the now-stable image tag pinned in.
+      implementation in the libtftest repo with `0.1.0` pinned in.
+      Fix DESIGN-0002's health-port and `/admin/audit` assumptions
+      first (see that doc's Open Questions).
 
 #### Success Criteria
 
 - Git tag `v0.1.0` exists and matches `mockta version`.
-- `docker pull ghcr.io/donaldgifford/mockta:v0.1.0` succeeds from a
+- `docker pull ghcr.io/donaldgifford/mockta:0.1.0` succeeds from a
   fresh machine.
-- `cosign verify ghcr.io/donaldgifford/mockta:v0.1.0` passes.
+- `cosign verify ghcr.io/donaldgifford/mockta:0.1.0` passes.
 - `CHANGELOG.md` reflects the v0.1.0 entries.
 - Wiki `docs/gaps.md` page is reachable and current.
 - Smoke fixture, when pointed at the *published* image (not a local
@@ -585,14 +601,16 @@ work end-to-end.
 | `cmd/mockta/main.go`                            | Modify | 1     | Replace stub with cobra root + serve/healthcheck/version.    |
 | `internal/cli/{root,serve,healthcheck,version,logger}.go` | Create | 1, 5 | Cobra subcommand wiring + slog setup. (Departure from the original `cmd/mockta/cmd/` location — keeps `cmd/` minimal per Go conventions.) |
 | `internal/config/config.go`                     | Create | 1     | Env-var driven config struct.                                |
-| `pkg/mockta/server.go`, `options.go`            | Create | 1, 3  | `New(cfg) *Server`; `Start(ctx)`, `Stop()`.                  |
+| `pkg/mockta/server.go`, `groups_routes*.go`   | Create | 1, 3, 7 | `New(cfg, logger) *Server`; `Start(ctx)`, `Stop()`, `APIHandler()`; group-route wiring split out so the `mockta_v0_undersized` tag can drop it. |
 | `internal/store/schema.go`, `types.go`, `*.go`  | Create | 2     | go-memdb schema + typed accessors.                           |
 | `internal/store/ids.go`                         | Create | 2     | Deterministic ID hashing.                                    |
-| `internal/middleware/{auth,errors,audit,pagination}.go` | Create | 3 | HTTP middleware.                                             |
+| `internal/middleware/{auth,audit,chain,pagination}.go` | Create | 3 | HTTP middleware.                                             |
+| `internal/oktaerr/oktaerr.go`                   | Create | 3     | Okta-shaped error envelope writer (originally planned as `middleware/errors.go`). |
 | `internal/handlers/{org,health,admin,notimplemented}.go` | Create | 3 | Non-resource handlers.                                     |
-| `internal/handlers/{users,groups,memberships,apps}.go`   | Create | 4 | Resource handlers + lifecycle.                              |
-| `internal/gaps/registry.go`                     | Create | 5     | Static gap registry + lookup.                                |
-| `docs/gaps.md`                                  | Create | 5     | Generated from registry + audit log.                         |
+| `internal/handlers/{users,groups,apps,dto}.go` | Create | 4     | Resource handlers + lifecycle; memberships are collocated in `groups.go`. |
+| `internal/gaps/{gaps,export}.go`               | Create | 5     | Static gap registry + lookup + markdown export.              |
+| `internal/cli/gaps.go`                          | Create | 5     | `mockta gaps list` / `gaps export` subcommands.               |
+| `docs/gaps.md`                                  | Create | 5     | Generated from the static registry only (deterministic).     |
 | `mkdocs.yml`                                    | Modify | 5     | Wire gaps page into wiki nav.                                |
 | `Dockerfile`                                    | Modify | 6     | Possibly add HEALTHCHECK; otherwise unchanged.               |
 | `.dockerignore`                                 | Modify | 6     | Exclude `tests/contract`, `tests/smoke`.                     |
@@ -610,21 +628,23 @@ work end-to-end.
   package. (`internal/store` was originally specced at ≥ 85%; the
   realised floor is 80% — see Phase 2 Success Criteria for the
   defensive-branch rationale.)
-- **Contract (Phase 7).** `tests/contract/` invokes the
-  `oktadeveloper/okta` (or `okta/okta`) provider in-process against
-  `pkg/mockta.Server`. Each v0 resource type gets
-  plan/apply/refresh/destroy assertions. Gating signal for "v0 is
-  done."
+- **Contract (Phase 7).** `tests/contract/` boots `pkg/mockta.Server`
+  on an `httptest.Server` and asserts the wire shape of every v0
+  endpoint over plain HTTP. No provider or Okta SDK in the dep tree;
+  the smoke fixture is what exercises the real provider. Gating signal
+  for "v0 is done."
 - **Smoke (Phase 7).** `terraform test` against the *built container*
-  exercising all four resource types via a sidecar `docker_container`
-  block. Catches container-shape issues the in-process contract
+  exercising user, group, and membership via a sidecar
+  `docker_container` block behind a Caddy TLS proxy. `okta_app_saml`
+  is excluded because the provider calls `/api/v1/policies`
+  (MOCKTA_GAP_0010) before touching `/api/v1/apps`. Catches container-shape issues the in-process contract
   suite can't.
 - **Gap-list determinism (Phase 7).** Golden-file test under an
   `mockta_v0_undersized` build tag (or equivalent) confirming gap IDs
   surface consistently.
-- **CI gates.** `just ci` (existing: `lint + test + build +
-  license-check`) plus new jobs `just test-contract` and a smoke
-  job that builds the image then runs `terraform test`.
+- **CI gates.** `just ci` (`lint + test-all + build + license-check +
+  gaps-check`, where `test-all` covers unit, contract, and gap-golden)
+  plus a smoke job that builds the image then runs `terraform test`.
 
 ## Dependencies
 
@@ -635,9 +655,9 @@ work end-to-end.
   `github.com/spf13/cobra`,
   `github.com/hashicorp/go-memdb`. HTTP server, router, and logging
   are stdlib (`net/http`, `net/http.ServeMux`, `log/slog`).
-- **New test deps (Phase 7):**
-  The `oktadeveloper/okta` (or `okta/okta`) Terraform provider,
-  pulled into `tests/contract/go.mod` only.
+- **New test deps (Phase 7):** none in Go. The `okta/okta ~> 4.0`
+  Terraform provider is pinned only in `tests/smoke/module/main.tf`;
+  `tests/contract/go.mod` depends on mockta itself and go-memdb.
 - **Existing infrastructure that must keep working:**
   `Dockerfile`, `docker-bake.hcl`, `.goreleaser.yml`,
   `.github/workflows/{ci,release,security,license-check}.yml`.
@@ -659,9 +679,9 @@ into the relevant phase tasks; cross-reference below.
 | 6  | Admin port auth                         | `/admin/reset` requires the admin token; `/health` and future `/metrics` stay unauthenticated.                                                                        | Phase 3    |
 | 7  | Strict-mode validation surface          | Required-field + RFC-5322-ish format + unique constraints. Unrecognized fields accepted and ignored (provider sends undocumented computed fields).                    | Phase 4    |
 | 8  | List filter operators                   | `eq` and `sw` against `id`, `login`, `email`, `status`. Everything else 400s with a gap-list pointer.                                                                 | Phase 4    |
-| 9  | Gap export source authority             | Registry-only for the committed `docs/gaps.md` (deterministic). Runtime hits surface via `mockta gaps list --runtime`.                                                | Phase 5    |
-| 10 | Contract suite Go module                | Separate `tests/contract/go.mod` — keeps provider dep tree out of the main module.                                                                                    | Phase 7    |
-| 11 | Provider namespace                      | `okta/okta` (current). Pin both `tests/contract/go.mod` and the libtftest setup module's `required_providers`.                                                        | Phase 7    |
+| 9  | Gap export source authority             | Registry-only for the committed `docs/gaps.md` (deterministic). The `--runtime` flag is reserved; in-process state dies with the binary so there is nothing to query yet. | Phase 5    |
+| 10 | Contract suite Go module                | Separate `tests/contract/go.mod` with a `replace` to the parent. Plain-HTTP assertions; no provider or SDK dependency at all.                                       | Phase 7    |
+| 11 | Provider namespace                      | `okta/okta` (current). Pinned in `tests/smoke/module/main.tf`; the libtftest setup module mirrors it.                                                            | Phase 7    |
 | 12 | `docker_container.healthcheck` gating   | Experiment in Phase 7's first smoke task. Fall back to a `terraform_data` waiter loop if Terraform doesn't actually wait on the Docker healthcheck.                   | Phase 7    |
 | 13 | Undersized-variant mechanism            | Build tag `//go:build mockta_v0_undersized` — CI-only artifact, keeps the published image clean.                                                                      | Phase 7    |
 | 14 | Provider-quirk fixture location         | `tests/contract/quirks/` with a README describing each pinned-down provider behavior.                                                                                 | Phase 7    |

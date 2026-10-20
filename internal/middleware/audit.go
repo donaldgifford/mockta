@@ -15,11 +15,10 @@ type AuditSink interface {
 }
 
 // statusRecorder wraps http.ResponseWriter to capture the status code
-// and gap ID for the audit log.
+// for the audit log.
 type statusRecorder struct {
 	http.ResponseWriter
 	status int
-	gapID  string
 }
 
 func (r *statusRecorder) WriteHeader(code int) {
@@ -31,9 +30,12 @@ func (r *statusRecorder) WriteHeader(code int) {
 // gap. The audit middleware reads it and forwards into the audit log.
 // Using a header is cleaner than a context-value handoff because it
 // composes with the standard http.Handler interface.
+//
+// The header is deliberately left on the response: by the time the
+// middleware sees it the headers have already been flushed to the
+// wire, and clients (the contract suite, provider logs, the libtftest
+// adapter) use it to discover which gap they hit.
 const GapHeader = "X-Mockta-Gap"
-
-func (r *statusRecorder) Header() http.Header { return r.ResponseWriter.Header() }
 
 // Audit logs every request to the given sink. The recorded entry
 // captures method, path, status, and the gap ID (if the handler set
@@ -45,12 +47,8 @@ func Audit(sink AuditSink) Func {
 			rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
 			next.ServeHTTP(rec, r)
 
-			// Read the gap ID set by the handler (if any) and strip
-			// the header before the response leaves the proxy chain.
-			rec.gapID = rec.Header().Get(GapHeader)
-			if rec.gapID != "" {
-				rec.Header().Del(GapHeader)
-			}
+			// Read the gap ID set by the handler (if any).
+			gapID := rec.Header().Get(GapHeader)
 
 			// A failed audit write must not fail the request — the
 			// audit log is observability, not a hard dependency.
@@ -60,7 +58,7 @@ func Audit(sink AuditSink) Func {
 				Method: r.Method,
 				Path:   r.URL.Path,
 				Status: rec.status,
-				GapID:  rec.gapID,
+				GapID:  gapID,
 			})
 		})
 	}

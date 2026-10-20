@@ -1,7 +1,7 @@
 ---
 id: DESIGN-0001
 title: "terraform-test compliant mockta v0"
-status: Draft
+status: Implemented
 author: Donald Gifford
 created: 2026-05-15
 ---
@@ -9,11 +9,13 @@ created: 2026-05-15
 
 # DESIGN 0001: terraform-test compliant mockta v0
 
-**Status:** Draft
+**Status:** Implemented
 **Author:** Donald Gifford
 **Date:** 2026-05-15
 
 <!--toc:start-->
+<!-- markdownlint-capture -->
+<!-- markdownlint-disable MD013 -->
 - [Overview](#overview)
 - [Goals and Non-Goals](#goals-and-non-goals)
   - [Goals](#goals)
@@ -34,6 +36,7 @@ created: 2026-05-15
 - [Open Questions](#open-questions)
   - [Resolved during review](#resolved-during-review)
 - [References](#references)
+<!-- markdownlint-restore -->
 <!--toc:end-->
 
 ## Overview
@@ -138,9 +141,15 @@ POST   /api/v1/apps/{id}/lifecycle/deactivate
 DELETE /api/v1/apps/{id}
 GET    /api/v1/apps?filter=...
 
-# Health (mockta-specific; for testcontainers wait strategy)
+# Health (mockta-specific; served on the admin port :9090, not :8080)
 GET    /health
+
+# Admin (also :9090; requires the admin token)
+POST   /admin/reset
 ```
+
+Also routed on :8080: `GET /api/v1/users/me` (the provider probes it
+during configure) and a catch-all that 501s with a gap ID.
 
 Pagination semantics: `Link: <...>; rel="next"` headers exactly match
 real Okta, even though v0 always returns full results in one page. The
@@ -193,14 +202,15 @@ provider logs.
   `Dockerfile` already targets this.
 - **Multi-arch:** `linux/amd64` + `linux/arm64` (existing `docker-bake.hcl`
   `mockta-release` target).
-- **Entrypoint:** `/mockta` with no required flags. Defaults to
-  `:8080` (HTTP) and `:9090` (admin/health/metrics).
+- **Entrypoint:** `/mockta serve` (the image sets `CMD ["serve"]`).
+  Defaults to `:8080` (Okta API) and `:9090` (admin + health).
 - **Image size target:** ≤ 15 MB.
 - **Env vars:**
-  - `MOCKTA_ADMIN_TOKEN` — required; the static bearer token the
-    `okta_*` provider authenticates with. If unset, mockta generates
-    one and logs it once on startup (testcontainers picks it up via
-    `LogConsumer`).
+  - `MOCKTA_ADMIN_TOKEN` — the static bearer token the `okta_*`
+    provider authenticates with. If unset, **auth is disabled** and
+    any request is accepted (handy for curl; the libtftest adapter
+    always sets one). Strict mode compares constant-time; permissive
+    mode accepts any non-empty bearer.
   - `MOCKTA_ORG_NAME` — defaults to `mockta-dev`. Surfaced in
     `/api/v1/org`.
   - (No persistence env var in v0. State is in-process only.)
@@ -208,10 +218,11 @@ provider logs.
     enforces Okta's documented validation rules; permissive mode
     accepts anything well-formed (for negative tests).
   - `MOCKTA_LOG_LEVEL` — `debug|info|warn|error`, defaults `info`.
-- **Health probe:** `GET /health` returns 200 once the DB is open and
-  the HTTP listener is bound. testcontainers waits on this.
-- **Ports:** 8080 (Okta API), 9090 (health/admin/metrics). Both
-  exposed by the existing Dockerfile.
+- **Health probe:** `GET :9090/health` returns 200 once both listeners
+  are bound. The in-binary `mockta healthcheck` subcommand probes it
+  for Docker `HEALTHCHECK` and `docker_container.healthcheck`.
+- **Ports:** 8080 (Okta API), 9090 (health + `/admin/reset`). Both
+  exposed by the existing Dockerfile. No metrics endpoint in v0.
 
 ### `terraform test` wiring
 
@@ -219,7 +230,7 @@ A consumer module repo's `tests/setup/main.tf` will look like:
 
 ```hcl
 resource "docker_container" "mockta" {
-  image = "ghcr.io/donaldgifford/mockta:v0.1.0"
+  image = "ghcr.io/donaldgifford/mockta:0.1.0"
   name  = "mockta-${terraform.workspace}"
   env = [
     "MOCKTA_ADMIN_TOKEN=test-admin-token",
@@ -274,15 +285,16 @@ boilerplate by hand.
 
 ### Provider compatibility
 
-v0 pins to the **latest released `oktadeveloper/okta` provider version
-at v0 tag time**. The exact version is captured in two places, in this
-order of authority:
+v0 pins to the **`okta/okta ~> 4.0` provider**. The exact constraint
+is captured in two places, in this order of authority:
 
-1. `tests/contract/go.mod` in the mockta repo — the contract suite
-   imports the provider directly and is the gating signal for "v0 is
-   done." Whatever it pins is the supported version.
+1. `tests/smoke/module/main.tf` in the mockta repo — the smoke
+   fixture drives the real provider against the built container and
+   is the only place the provider enters the dependency tree. (The
+   contract suite asserts wire shape over plain HTTP and has no
+   provider or SDK dependency.)
 2. The `required_providers` block in the libtftest setup module
-   (DESIGN-0002) — mirrors the contract pin.
+   (DESIGN-0002) — mirrors the smoke pin.
 
 Bumping the provider is a deliberate change to both files plus a
 contract-test run; we don't float to `latest` in CI. Once a real
@@ -305,7 +317,7 @@ gap-list ID. The mockta repo carries `docs/gaps.md` (or equivalent),
 auto-generated from a source-of-truth registry:
 
 ```go
-// internal/gaps/registry.go
+// internal/gaps/gaps.go
 type Gap struct {
     ID        string   // MOCKTA_GAP_0001
     Endpoint  string   // POST /api/v1/policies
@@ -337,13 +349,15 @@ is new. No breaking changes possible at v0.
 CLI surface for the `mockta` binary in v0:
 
 ```
-mockta                  # start server on :8080 and :9090
-mockta healthcheck      # exit 0 if /health is 200, else 1 (for HEALTHCHECK)
+mockta serve            # start server on :8080 and :9090 (bare `mockta` prints help)
+mockta healthcheck      # exit 0 if :9090/health is 200, else 1 (for HEALTHCHECK)
 mockta version          # print version + commit
+mockta gaps list        # print the gap registry as a table
+mockta gaps export      # emit docs/gaps.md (--out FILE); --runtime is reserved
 ```
 
-No subcommands for seeding, reset, etc. in v0 — those go through the
-admin API on `:9090`.
+No subcommands for seeding or reset in v0 — reset goes through
+`POST /admin/reset` on `:9090`.
 
 ## Data Model
 
@@ -356,28 +370,34 @@ indexes:
 | `groups`            | `id`          | `name` (unique), `type`          | id, name, type, description, profile (JSON blob), created_at      |
 | `apps`              | `id`          | `label`, `sign_on_mode`          | id, name, label, status, sign_on_mode, settings (JSON blob), created_at |
 | `group_memberships` | `group_id+user_id` | `group_id`, `user_id`       | group_id, user_id, created_at                                     |
-| `audit_log`         | `id` (ULID)   | `ts`, `gap_id`                   | id, ts, method, path, status, gap_id (nullable)                   |
+| `audit_log`         | `id` (monotonic uint64) | `gap_id`                | id, ts, method, path, status, gap_id (nullable)                   |
 
 Records are plain Go structs registered with go-memdb's schema. JSON
 blobs (profile, settings) are stored as `[]byte` and parsed on read
 when individual fields are needed for filter evaluation — for v0 most
 filter paths read whole records and let the handler do the work.
 
-The `audit_log` table doubles as the source for `docs/gaps.md`
-generation: any 501 response writes a row, and a `mockta gaps export`
-admin command iterates the `gap_id` index and emits the markdown.
+The `audit_log` table records every request (method, path, status,
+gap ID) so a test can ask which gaps it hit. The committed
+`docs/gaps.md` is generated from the **static registry only** so it
+is deterministic across runs; a `--runtime` flag on `mockta gaps
+export` is reserved for merging audit-log hits once there is a
+persistent log to read.
 
 ## Testing Strategy
 
 - **Unit tests (Go).** Per-handler tests using `httptest`, covering
   happy path + Okta-documented error responses. Table-driven.
-- **Provider-level contract tests.** A `tests/contract/` Go test that
-  invokes the `oktadeveloper/okta` provider in-process and asserts
-  plan/apply/refresh/destroy round-trips for each v0 resource type.
-  This is the gating signal for "v0 is done."
+- **Contract tests.** A separate Go module in `tests/contract/` that
+  boots mockta in-process on an `httptest.Server` and asserts the
+  wire shape of every v0 endpoint over plain HTTP (no provider, no
+  SDK). This is the gating signal for "v0 is done."
 - **`terraform test` smoke fixture.** A minimal Terraform module
-  exercising all four resource types, run via `terraform test` against
-  a built mockta container. Lives in `tests/smoke/`.
+  exercising user, group, and membership with the real `okta/okta`
+  provider, run via `terraform test` against a built mockta container
+  behind a Caddy TLS proxy. `okta_app_saml` is excluded because the
+  provider calls `/api/v1/policies` (MOCKTA_GAP_0010) first. Lives
+  in `tests/smoke/`.
 - **Gap-list determinism test.** Run the smoke fixture against a
   deliberately-undersized mockta build (some endpoints intentionally
   off) and assert the gap-list output matches a golden file. Catches
@@ -385,9 +405,9 @@ admin command iterates the `gap_id` index and emits the markdown.
 - **No real Okta integration tests in v0.** The "nightly diff against
   real Okta" test is Tier 1.
 
-CI gates: existing `just ci` recipe (`lint + test + build +
-license-check`) plus a new `just test-contract` recipe for the
-provider-level tests.
+CI gates: `just ci` (`lint + test-all + build + license-check +
+gaps-check`) where `test-all` runs the unit, contract, and gap-golden
+suites; the smoke job runs separately because it needs Docker.
 
 ## Migration / Rollout Plan
 
@@ -411,9 +431,9 @@ None — all v0 questions resolved during review.
 
 ### Resolved during review
 
-- **Provider version pinning** → Pin to the latest released
-  `oktadeveloper/okta` at v0 tag time; expand to a range only when a
-  real matrix becomes valuable. See [Provider compatibility](#provider-compatibility).
+- **Provider version pinning** → `okta/okta ~> 4.0`, pinned in the
+  smoke fixture; expand to a range only when a real matrix becomes
+  valuable. See [Provider compatibility](#provider-compatibility).
 - **`docker_container` vs `terraform_data`** → Use the Terraform Docker
   provider, matching the LocalStack pattern consumer repos already use.
   See [`terraform test` wiring](#terraform-test-wiring).
@@ -430,7 +450,7 @@ None — all v0 questions resolved during review.
 
 - [RFC-0001: mockta](../rfc/0001-mockta-lightweight-okta-mock-for-terraform-and-go-service-tests.md)
 - DESIGN-0002: libtftest mockta parity adapter (companion design).
-- [`oktadeveloper/okta` provider](https://registry.terraform.io/providers/okta/okta/latest/docs)
+- [`okta/okta` provider](https://registry.terraform.io/providers/okta/okta/latest/docs)
 - [Okta Management API reference](https://developer.okta.com/docs/reference/api/users/)
 - `Dockerfile`, `docker-bake.hcl` — existing container infrastructure
   this design builds on.

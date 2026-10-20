@@ -1,7 +1,7 @@
 ---
 id: RFC-0001
 title: "mockta: lightweight Okta mock for Terraform and Go service tests"
-status: Draft
+status: Accepted
 author: Donald Gifford
 created: 2026-05-15
 ---
@@ -9,11 +9,13 @@ created: 2026-05-15
 
 # RFC 0001: mockta: lightweight Okta mock for Terraform and Go service tests
 
-**Status:** Draft
+**Status:** Accepted
 **Author:** Donald Gifford
 **Date:** 2026-05-15
 
 <!--toc:start-->
+<!-- markdownlint-capture -->
+<!-- markdownlint-disable MD013 -->
 - [Summary](#summary)
 - [Problem Statement](#problem-statement)
 - [Proposed Solution](#proposed-solution)
@@ -31,6 +33,7 @@ created: 2026-05-15
 - [Success Criteria](#success-criteria)
 - [Open Questions](#open-questions)
 - [References](#references)
+<!-- markdownlint-restore -->
 <!--toc:end-->
 
 ## Summary

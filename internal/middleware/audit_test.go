@@ -60,9 +60,10 @@ func TestAudit_ForwardsGapHeader(t *testing.T) {
 	if got := sink.entries[0].GapID; got != "MOCKTA_GAP_0042" {
 		t.Errorf("GapID = %q, want MOCKTA_GAP_0042", got)
 	}
-	// Header should be stripped before the response leaves.
-	if rec.Header().Get(GapHeader) != "" {
-		t.Errorf("gap header leaked to client: %q", rec.Header().Get(GapHeader))
+	// The header stays on the response so clients can see which gap
+	// they hit (the contract suite and gap-golden test depend on it).
+	if got := rec.Header().Get(GapHeader); got != "MOCKTA_GAP_0042" {
+		t.Errorf("gap header on response = %q, want MOCKTA_GAP_0042", got)
 	}
 }
 

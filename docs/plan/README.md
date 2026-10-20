@@ -6,10 +6,11 @@ implementation plan (how step-by-step). Use a plan when the scope is clear but
 the execution approach needs to be worked out before writing tasks.
 
 <!-- BEGIN DOCZ AUTO-GENERATED -->
-## All PLANs
+## All Plan
 
+<!-- markdownlint-capture -->
+<!-- markdownlint-disable MD013 -->
 | ID | Title | Status | Date | Author | Link |
-|----|-------|--------|------|--------|------|
-<!-- END DOCZ AUTO-GENERATED -->
-<!-- BEGIN DOCZ AUTO-GENERATED -->
+| --- | --- | --- | --- | --- | --- |
+<!-- markdownlint-restore -->
 <!-- END DOCZ AUTO-GENERATED -->

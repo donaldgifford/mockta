@@ -26,10 +26,10 @@ docker-push:
 docker-ci:
     @docker buildx bake ci
 
-# Smoke-test the locally built image. Loads it into the daemon (the
-# default bake target uses the registry exporter via --output=type=docker
-# behavior for single-arch); we override with --load so the image is
-# directly addressable. Then probes /health and /api/v1/org.
+# Loads the locally built image into the daemon with --load so it is
+# directly addressable, then probes :9090/health and :8080/api/v1/org.
+#
+# Smoke-test the locally built image (health + org probes)
 [group('docker')]
 docker-smoke:
     @docker buildx bake --load
@@ -48,9 +48,10 @@ docker-smoke:
     @docker rm -f mockta-smoke
     @echo "✓ smoke OK"
 
-# Verify the locally built image is at or below the 15 MB v0 budget.
-# Phase 6 success criterion. Reads the size from `docker image inspect`
-# and compares against the threshold; non-zero exit fails the gate.
+# Reads the size from `docker image inspect` and compares against the
+# threshold; non-zero exit fails the gate (Phase 6 success criterion).
+#
+# Verify the locally built image is at or below the 15 MB v0 budget
 [group('docker')]
 docker-size:
     @docker buildx bake --load
