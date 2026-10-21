@@ -5,7 +5,7 @@
 // of pkg/mockta, never a tagged release.
 module github.com/donaldgifford/mockta/tests/contract
 
-go 1.26.2
+go 1.26.10
 
 replace github.com/donaldgifford/mockta => ../..
 
